@@ -14,9 +14,9 @@ Sparky(
     desc: "TikTok downloader (HD only)",
   },
   async ({ m, client, args }) => {
-    const text = args.trim();
+    let text = args.trim();
 
-    const url = text.match(/(https?:\/\/[^\s]+)/g)?.[0];
+    const url = text.match(/(https?:\/\/[^\s]+)/)?.[0]?.replace(/[)\].,]+$/, "");
 
     if (!url) {
       return client.sendMessage(
@@ -26,8 +26,7 @@ Sparky(
       );
     }
 
-    const tiktokRegex = /(tiktok\.com|vt\.tiktok\.com)/;
-    if (!tiktokRegex.test(url)) {
+    if (!/(tiktok\.com|vt\.tiktok\.com)/.test(url)) {
       return client.sendMessage(
         m.jid,
         { text: "❌ Invalid TikTok URL" },
@@ -46,16 +45,17 @@ Sparky(
             url,
           },
           httpsAgent,
-          timeout: 15000,
+          timeout: 20000,
         }
       );
 
-      const res = data?.result || data?.data;
+      console.log("API RESPONSE:", JSON.stringify(data, null, 2));
 
-      if (!res) throw new Error("No video found");
+      const res = data?.result?.data || data?.data?.result || data?.result || data?.data;
 
-      // 🎯 ALWAYS HD FIRST
-      const videoUrl = res.hdplay || res.play || res.url;
+      if (!res) throw new Error("No video found from API");
+
+      const videoUrl = res?.hdplay || res?.play || res?.url;
 
       if (!videoUrl) throw new Error("Video URL not found");
 
@@ -64,11 +64,10 @@ Sparky(
       const stream = await axios.get(videoUrl, {
         responseType: "arraybuffer",
         httpsAgent,
-        timeout: 20000,
+        timeout: 30000,
       });
 
       const buffer = Buffer.from(stream.data);
-      const sizeMB = (buffer.length / (1024 * 1024)).toFixed(2);
 
       const caption = `
 🎬 *TikTok Downloader (HD)*
@@ -78,7 +77,6 @@ Sparky(
 
 🎚 Quality : HD
 ⏱ Duration : ${res.duration || 0}s
-📦 Size : ${sizeMB} MB
 
 ❤️ Likes : ${res.like_count || 0}
 💬 Comments : ${res.comment_count || 0}
@@ -87,28 +85,14 @@ Sparky(
 📥 Downloaded Successfully
 `;
 
-      // 16MB limit check
-      if (buffer.length > 16 * 1024 * 1024) {
-        await client.sendMessage(
-          m.jid,
-          {
-            document: buffer,
-            mimetype: "video/mp4",
-            fileName: `tiktok_hd_${Date.now()}.mp4`,
-            caption,
-          },
-          { quoted: m }
-        );
-      } else {
-        await client.sendMessage(
-          m.jid,
-          {
-            video: buffer,
-            caption,
-          },
-          { quoted: m }
-        );
-      }
+      await client.sendMessage(
+        m.jid,
+        {
+          video: buffer,
+          caption,
+        },
+        { quoted: m }
+      );
 
       await m.react("✅");
     } catch (error) {
