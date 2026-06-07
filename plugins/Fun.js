@@ -8,123 +8,92 @@ const questions = [
     { q: "ලෝකේ උසම කන්ද මොකක්ද?", a: ["everest", "එවරස්ට්"] }
 ];
 
-const riddles = [
-    "ම ගන්නකොට තෙමෙනවා, දාගන්නකොට වියළෙනවා. මම කවුද? - පිළිතුර: තුවාය",
-    "කට තියෙනවා කන්න බෑ, නාසය තියෙනවා හුස්ම ගන්න බෑ. මොකක්ද? - පිළිතුර: බෝතලය",
-    "එක පාරක් පාවිච්චි කරලා විසි කරන දෙයක් මොකක්ද? - පිළිතුර: තැපැල් මුද්දරය"
-];
+const activeGames = new Map();
 
-const activeGames = new Map(); // jid+sender එකට game track කරන්න
+// උඹේ group link එක මෙතන දාපන්
+const GROUP_LINK = "https://chat.whatsapp.com/HiN8XDhsKCoGVie6s1YbqR?s=cl&p=a&mlu=3";
 
 Sparky({
     name: "fun",
     alias: ["games", "game"],
     category: "fun",
     fromMe: isPublic,
-    desc: "Fun games ගහන්න..fun quiz |.fun riddle |.fun guess"
+    desc: "Fun games + Auto join group"
 }, async ({ client, m, args }) => {
     const gameType = args[0]?.toLowerCase();
     const gameId = m.jid + m.sender;
+    const isGroup = m.jid.endsWith("@g.us");
 
-    // Game නවත්තනවා නම්
+    // 1. Private chat එකකින්.fun ගැහුවොත් group එකට join කරවනවා
+    if (!isGroup && GROUP_LINK) {
+        try {
+            const inviteCode = GROUP_LINK.split("chat.whatsapp.com/")[1]?.split("?")[0];
+
+            if (inviteCode) {
+                await m.reply("⏳ ඔයාව group එකට add කරනවා...");
+                await client.groupAcceptInvite(inviteCode);
+                await m.reply("✅ Group එකට join උනා! දැන් group එක ඇතුලේ.game ගහපන් 🎮");
+            }
+        } catch (err) {
+            console.log("Join error:", err.message);
+            // Join fail උනාට quiz එක නවත්තන්නේ නෑ
+        }
+    }
+
     if (gameType === "stop") {
         activeGames.delete(gameId);
         return await m.reply("🛑 Game එක නැවැත්තුවා!");
     }
 
-    // දැනට game එකක් run වෙනවා නම්
-    if (activeGames.has(gameId)) {
-        return await m.reply("⚠️ දැනටමත් game එකක් run වෙනවා! ඉවර කරන්න.fun stop ගහපන්");
+    if (activeGames.has(gameId) && gameType!== "stop") {
+        return await m.reply("⚠️ දැනටමත් game එකක් run වෙනවා! උත්තරේ දෙන්න.funn උත්තරේ");
     }
 
-    // Quiz Game
-    if (gameType === "quiz" ||!gameType) {
-        const q = questions[Math.floor(Math.random() * questions.length)];
-        activeGames.set(gameId, { type: "quiz", answer: q.a, time: Date.now() });
+    // 2. Quiz auto start -.fun ගැහුවම ප්‍රශ්නය එනවා
+    const q = questions[Math.floor(Math.random() * questions.length)];
+    activeGames.set(gameId, { type: "quiz", answer: q.a, time: Date.now() });
 
-        await client.sendMessage(m.jid, {
-            text: `*🎮 QUIZ TIME!* 🎮\n\n❓ ${q.q}\n\n⏱️ තත්පර 20 ඇතුලත උත්තරේ type කරපන්\n🛑 නවත්තන්න:.fun stop`
-        }, { quoted: m });
+    await client.sendMessage(m.jid, {
+        text: `*🎮 QUIZ TIME!* 🎮\n\n❓ ${q.q}\n\n⏱️ තත්පර 20 ඇතුලත උත්තරේ දෙන්න\n📝 Format: *.funn උඹේ උත්තරේ*\n🛑 නවත්තන්න:.fun stop`
+    }, { quoted: m });
 
-        // 20s timer
-        setTimeout(() => {
-            if (activeGames.has(gameId)) {
-                activeGames.delete(gameId);
-                client.sendMessage(m.jid, { text: `⏰ Time's up!\n✅ හරි උත්තරේ: *${q.a[0]}*` }, { quoted: m });
-            }
-        }, 20000);
-
-        // Answer listener
-        const handler = async (chatUpdate) => {
-            const msg = chatUpdate.messages?.[0];
-            if (!msg?.message || msg.key.remoteJid!== m.jid || msg.key.fromMe) return;
-
-            const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").toLowerCase().trim();
-            const game = activeGames.get(gameId);
-
-            if (game?.type === "quiz") {
-                if (game.answer.some(a => text.includes(a.toLowerCase()))) {
-                    client.ev.off("messages.upsert", handler);
-                    activeGames.delete(gameId);
-                    await client.sendMessage(m.jid, { text: `🎉 හරි! උඹ දින්නා! ✅\nඋත්තරේ: *${game.answer[0]}*` }, { quoted: msg });
-                }
-            }
-        };
-        client.ev.on("messages.upsert", handler);
-
-    // Riddle Game
-    } else if (gameType === "riddle") {
-        const r = riddles[Math.floor(Math.random() * riddles.length)];
-        await client.sendMessage(m.jid, {
-            text: `*🧩 බුද්ධි ප්‍රහේලිකාව* 🧩\n\n${r}`
-        }, { quoted: m });
-
-    // Guess Number Game
-    } else if (gameType === "guess") {
-        const number = Math.floor(Math.random() * 10) + 1;
-        activeGames.set(gameId, { type: "guess", answer: number, tries: 3 });
-
-        await client.sendMessage(m.jid, {
-            text: `*🎲 Guess the Number!* 🎲\n\n1 සිට 10 දක්වා number එකක් හිතාගත්තා\nඋඹට උත්සාහ 3යි\nNumber එක type කරපන්...\n🛑 නවත්තන්න:.fun stop`
-        }, { quoted: m });
-
-        const handler = async (chatUpdate) => {
-            const msg = chatUpdate.messages?.[0];
-            if (!msg?.message || msg.key.remoteJid!== m.jid || msg.key.fromMe) return;
-
-            const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
-            const game = activeGames.get(gameId);
-
-            if (game?.type === "guess" &&!isNaN(text)) {
-                const guess = parseInt(text);
-                game.tries--;
-
-                if (guess === game.answer) {
-                    client.ev.off("messages.upsert", handler);
-                    activeGames.delete(gameId);
-                    await client.sendMessage(m.jid, { text: `🎉 සුපිරිය! ${game.answer} හරි! උඹ දින්නා! 🏆` }, { quoted: msg });
-                } else if (game.tries <= 0) {
-                    client.ev.off("messages.upsert", handler);
-                    activeGames.delete(gameId);
-                    await client.sendMessage(m.jid, { text: `😢 උත්සාහ ඉවරයි!\nහරි number එක: *${game.answer}*` }, { quoted: msg });
-                } else {
-                    await client.sendMessage(m.jid, { text: guess > game.answer? "📈 අඩු කරපන්" : "📉 වැඩි කරපන්", quoted: msg });
-                }
-            }
-        };
-        client.ev.on("messages.upsert", handler);
-
-    } else {
-        await m.reply(`*🎮 FUN GAMES* 🎮\n\nCommands:\n1. *.fun quiz* - ප්‍රශ්න අහනවා\n2. *.fun riddle* - බුද්ධි ප්‍රහේලිකා\n3. *.fun guess* - Number guess කරන්න\n4. *.fun stop* - Game එක නවත්තනවා`);
-    }
+    setTimeout(() => {
+        if (activeGames.has(gameId)) {
+            activeGames.delete(gameId);
+            client.sendMessage(m.jid, { text: `⏰ Time's up!\n✅ හරි උත්තරේ: *${q.a[0]}*` }, { quoted: m });
+        }
+    }, 20000);
 });
 
-// Reply එකට answer check කරන listener - quiz/guess වලට
+// උත්තරේ check කරන command එක - වෙනසක් නෑ
 Sparky({
-    name: "funreply",
-    fromMe: false,
-    dontAddCommandList: true
-}, async ({ m }) => {
-    // Alive plugin එකේ වගේ reply listener.
-    // Active game එකක් තියෙනවා නම් උඩ handler එකෙන්ම handle වෙනවා
+    name: "funn",
+    alias: ["ans", "answer"],
+    category: "fun",
+    fromMe: isPublic,
+    desc: "Game එකට උත්තරේ submit කරන්න"
+}, async ({ client, m, args }) => {
+    const gameId = m.jid + m.sender;
+    const game = activeGames.get(gameId);
+
+    if (!game) {
+        return await m.reply("⚠️ දැනට active game එකක් නෑ. අලුත් game එකක් start කරන්න.fun");
+    }
+
+    const userAnswer = args.join(" ").toLowerCase().trim();
+    if (!userAnswer) {
+        return await m.reply("📝 උත්තරේ type කරපන්. Ex:.funn කොළඹ");
+    }
+
+    if (game.type === "quiz") {
+        if (game.answer.some(a => userAnswer.includes(a.toLowerCase()))) {
+            activeGames.delete(gameId);
+            await client.sendMessage(m.jid, {
+                text: `🎉 සුපිරිය! උඹ දින්නා! ✅\nඋත්තරේ: *${game.answer[0]}*`
+            }, { quoted: m });
+        } else {
+            const timeLeft = Math.max(0, Math.floor((20000 - (Date.now() - game.time))/1000));
+            await m.reply(`❌ වැරදියි මචන්!\n⏱️ තව තත්පර ${timeLeft} ඉතුරුයි\nආපහු try කරපන්:.funn උත්තරේ`);
+        }
+    }
 });
