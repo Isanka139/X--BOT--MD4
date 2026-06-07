@@ -13,13 +13,14 @@ Sparky({
 }, async ({ client, m }) => {
 
     try {
-        // 1. Reply කරපු message එකක්ද නැත්නම් current message එකද කියලා තෝරාගැනීම
-        const quoted = m.quoted ? m.quoted : m;
+        // 1. Reply කරපු message එකක් තියෙනවා නම් ඒක quoted වලට ගන්නවා
+        const quoted = m.quoted ? m.quoted : null;
 
-        // 2. Message එකේ image එකක් තියෙනවද කියලා check කිරීම (Caption එකක් විදිහට හෝ Reply එකක් විදිහට)
-        const hasImage = m.image || (m.quoted && m.quoted.image);
+        // 2. Caption එකක් විදිහට හෝ Reply එකක් විදිහට Image එකක් තියෙනවද කියලා නිවැරදිව Check කිරීම
+        const isCurrentImage = m.image || m.type === 'imageMessage';
+        const isQuotedImage = quoted && (quoted.image || quoted.type === 'imageMessage' || quoted.mtype === 'imageMessage');
 
-        if (!hasImage) {
+        if (!isCurrentImage && !isQuotedImage) {
             await client.sendMessage(m.jid, {
                 react: { text: "❌", key: m.key }
             });
@@ -30,8 +31,17 @@ Sparky({
             react: { text: "⏳", key: m.key }
         });
 
-        // 3. නිවැරදි image එක download කරගැනීම
-        const buffer = m.image ? await m.download() : await m.quoted.download();
+        // 3. Image එක නිවැරදිව download කරගැනීම
+        let buffer;
+        if (isCurrentImage) {
+            buffer = await m.download();
+        } else if (isQuotedImage) {
+            buffer = await quoted.download();
+        }
+
+        if (!buffer) {
+            throw new Error("Could not download image buffer");
+        }
 
         const form = new FormData();
         form.append("image", buffer, {
@@ -72,7 +82,13 @@ Sparky({
             m.jid,
             {
                 image: Buffer.from(enhanced.data),
-                caption: `✨ AI PHOTO ENHANCER PRO\n\n🖼️ Quality Enhanced Successfully\n🚀 Engine: DeepAI SRGAN\n📈 Result: HD Upscaled Image\n\n❖ Powered By X-KADIYA-MD 💎`
+                caption: `✨ *AI PHOTO ENHANCER PRO*
+
+🖼️ Quality Enhanced Successfully
+🚀 Engine: DeepAI SRGAN
+📈 Result: HD Upscaled Image
+
+❖ Powered By X-KADIYA-MD 💎`
             },
             { quoted: m }
         );
