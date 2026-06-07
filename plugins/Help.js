@@ -9,7 +9,7 @@ Sparky({
     try {
 
         const helpText = `
-╭━━━〔 🤖 X-KADIYA-MD 〕━━━⬣
+╭━━━〔 ❖Ƭʜᴇ 𝐗-𝐊𝐀𝐃𝐈𝐘𝐀-𝐌𝐃 💎 〕━━━⬣
 ┃
 ┃ 👋 Welcome to X-KADIYA-MD Bot
 ┃
