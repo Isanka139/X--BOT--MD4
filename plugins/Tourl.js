@@ -6,27 +6,32 @@ Sparky({
     name: "tourl",
     category: "tools",
     fromMe: isPublic,
-    desc: "Convert replied image to URL"
-}, async ({ m, client }) => {
+    desc: "Convert image to URL"
+}, async ({ m }) => {
     try {
-        const quoted = m.quoted;
+        let imageMsg;
 
-        if (!quoted) {
-            return await m.reply("❌ Photo එකකට reply කරලා .tourl කියන්න.");
+        // Reply කරලා නම්
+        if (m.quoted && (m.quoted.mimetype || "").startsWith("image")) {
+            imageMsg = m.quoted;
+        }
+        // Image එකට caption එකක් විදියට .tourl දීලා නම්
+        else if ((m.mimetype || "").startsWith("image")) {
+            imageMsg = m;
         }
 
-        const mime = quoted.mimetype || "";
-
-        if (!mime.startsWith("image")) {
-            return await m.reply("❌ Image එකකට විතරයි support කරන්නෙ.");
+        if (!imageMsg) {
+            return await m.reply(
+                "❌ Photo එකකට reply කරලා හෝ photo එක caption එකේ .tourl දීලා use කරන්න."
+            );
         }
 
         await m.reply("⏳ Uploading image...");
 
-        const buffer = await quoted.download();
+        const buffer = await imageMsg.download();
 
         const form = new FormData();
-        form.append("file", buffer, "image.jpg");
+        form.append("image", buffer, "image.jpg");
 
         const { data } = await axios.post(
             "https://api.imgbb.com/1/upload?key=c8bffc242bc925085cde1cc97dc6bec8",
@@ -36,7 +41,7 @@ Sparky({
             }
         );
 
-        if (!data?.success) {
+        if (!data.success) {
             return await m.reply("❌ Upload failed.");
         }
 
