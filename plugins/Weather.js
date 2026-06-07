@@ -1,7 +1,7 @@
 const { Sparky, isPublic } = require("../lib");
 const axios = require("axios");
 
-const API_KEY = "fdc5c59c78c15e079ec1a9c30bbd5a06";
+const API_KEY = "4c973ebdcfbde98f36d684ebe7840062";
 
 const weatherEmoji = {
     Thunderstorm: "⛈️", Drizzle: "🌦️", Rain: "🌧️", Snow: "❄️",
@@ -26,12 +26,12 @@ Sparky({
         await client.sendMessage(m.jid, { react: { text: "🌐", key: m.key } });
         await client.sendPresenceUpdate('composing', m.jid);
 
-        // lang parameter අයින් කරා - free API එකට error දෙනවා
+        // API URL
         const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric`;
         
         const res = await axios.get(url, { 
             timeout: 15000,
-            validateStatus: () => true // 404 error throw වෙන්න දෙන්නේ නෑ
+            validateStatus: () => true 
         });
 
         if (res.status !== 200) {
@@ -54,7 +54,9 @@ Sparky({
         const wind = data.wind?.speed || "N/A";
         const desc = data.weather?.[0]?.description || "N/A";
         const main = data.weather?.[0]?.main || "Clear";
-        const emoji = weatherEmoji || "🌡️";
+        
+        // මේ පේළිය මම හැදුවා: දැන් අදාළ emoji එක හරියටම තෝරගන්නවා
+        const emoji = weatherEmoji[main] || "🌡️";
 
         await client.sendMessage(m.jid, { react: { text: "✅", key: m.key } });
 
