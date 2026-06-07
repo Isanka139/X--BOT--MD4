@@ -7,7 +7,7 @@
   "stack": "container",
   "env": {
     "SESSION_ID": {
-      "description": "Paste your WhatsApp Session ID here (Required).",
+      "description": "A-S-W-I-N-S-P-A-R-K-Y:bc8e824e5ea2c82ee0ce81fb04d6b43b",
       "required": true
     },
     "HANDLERS": {
@@ -18,7 +18,7 @@
     "SUDO": {
       "description": "Enter owner numbers with country code (without +), separated by commas for multiple owners. Example: 919876543210,917012345678",
       "required": true,
-      "value": "917012984396"
+      "value": "94765901096"
     },
     "HEROKU_APP_NAME": {
       "description": "Enter the exact name of your Heroku app (must match the app name you created).",
@@ -36,7 +36,7 @@
     "BOT_INFO": {
       "description": "Customize bot menu information (Format: BotName;OwnerName;ImageURL).",
       "required": false,
-      "value": "X-BOT-MD;ASWIN SPARKY;https://url.aswinsparky.qzz.io/sparky.jpg"
+      "value": "X-PRON-MD;ASWIN SPARKY;https://url.aswinsparky.qzz.io/sparky.jpg"
     },
     "ALWAYS_ONLINE": {
       "description": "Set to 'true' to keep bot always online, or 'false' to stay offline until a message is received.",
@@ -45,13 +45,13 @@
     },
     "WORK_TYPE": {
       "description": "Set bot mode: 'public' to allow everyone to use, 'private' to allow only owner/sudo users.",
-      "required": false,
+      "required": true,
       "value": "private"
     },
     "AUTO_STATUS_VIEW": {
       "description": "Set to 'true' to auto-view WhatsApp statuses, or 'false' to disable.",
-      "required": false,
-      "value": "false"
+      "required": true,
+      "value": "true"
     }
   },
   "addons": [
