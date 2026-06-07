@@ -11,101 +11,72 @@ Sparky(
     name: "tt",
     fromMe: isPublic,
     category: "downloader",
-    desc: "TikTok downloader (HD only)",
+    desc: "Download TikTok videos in HD if available.",
   },
   async ({ m, client, args }) => {
-    let text = args.trim();
-
-    const url = text.match(/(https?:\/\/[^\s]+)/)?.[0]?.replace(/[)\].,]+$/, "");
-
-    if (!url) {
-      return client.sendMessage(
-        m.jid,
-        { text: "❌ Usage: .tt <tiktok url>" },
-        { quoted: m }
-      );
+    if (!args || args.trim() === "") {
+      return await client.sendMessage(m.jid, { text: "❌ *Usage:* `.tt <URL>`" }, { quoted: m });
     }
 
-    if (!/(tiktok\.com|vt\.tiktok\.com)/.test(url)) {
-      return client.sendMessage(
-        m.jid,
-        { text: "❌ Invalid TikTok URL" },
-        { quoted: m }
-      );
+    // Improved URL validation
+    const urlMatch = args.match(/(https?:\/\/[^\s]+)/g);
+    const tiktokRegex = /(tiktok\.com|vt\.tiktok\.com)/;
+    if (!urlMatch || !tiktokRegex.test(urlMatch[0])) {
+      return await client.sendMessage(m.jid, { text: "❌ *Invalid TikTok URL.*" }, { quoted: m });
     }
 
-    await m.react("⏳");
+    const tiktokUrl = urlMatch[0];
+    await m.react('⏳');
 
     try {
-      const { data } = await axios.get(
-        "https://api.zanta-mini.store/api/tiktok",
-        {
-          params: {
-            apiKey: "zanta_6xeM2XzKaDSDKLwRhOP85mYv",
-            url,
-          },
-          httpsAgent,
-          timeout: 20000,
-        }
-      );
+      const apiUrl = `https://tikwm.com/api/?url=${encodeURIComponent(tiktokUrl)}`;
+      const response = await axios.get(apiUrl, { httpsAgent, timeout: 15000 });
+      const data = response.data;
 
-      console.log("API RESPONSE:", JSON.stringify(data, null, 2));
+      if (!data || !data.data) throw new Error("Video not found!");
 
-      const res = data?.result?.data || data?.data?.result || data?.result || data?.data;
+      // ⚡ HD තිබුණොත් ඒක ගන්නවා, නැත්නම් Normal එක
+      const videoUrl = data.data.hdplay || data.data.play;
+      if (!videoUrl) throw new Error("No video URL found (HD or normal).");
 
-      if (!res) throw new Error("No video found from API");
+      const isHD = data.data.hdplay ? "High Quality (HD) ✅" : "Normal Quality ⚠️";
+      const title = data.data.title || "No Title";
 
-      const videoUrl = res?.hdplay || res?.play || res?.url;
+      await m.react('⬇️');
 
-      if (!videoUrl) throw new Error("Video URL not found");
-
-      await m.react("⬇️");
-
-      const stream = await axios.get(videoUrl, {
-        responseType: "arraybuffer",
+      const videoStream = await axios.get(videoUrl, {
         httpsAgent,
-        timeout: 30000,
+        responseType: "arraybuffer",
+        timeout: 20000
       });
+      const videoBuffer = Buffer.from(videoStream.data);
 
-      const buffer = Buffer.from(stream.data);
+      const captionText = `🎬 *ѕά𝓭є𝔀 ᵐ𝐃 Ŧ𝕚ᛕ𝕋𝔬ķ♫*\n\n📝 *Title:* ${title}\n✨ *Quality:* ${isHD}\n📦 *Size:* ${(videoBuffer.length / (1024 * 1024)).toFixed(2)}MB\n\n*Downloaded by SADEW-MD*`;
 
-      const caption = `
-🎬 *TikTok Downloader (HD)*
+      // 16MB limit check
+      if (videoBuffer.length > 16 * 1024 * 1024) {
+        await client.sendMessage(m.jid, {
+          document: videoBuffer,
+          mimetype: "video/mp4",
+          fileName: `tiktok_${Date.now()}.mp4`,
+          caption: captionText
+        }, { quoted: m });
+      } else {
+        await client.sendMessage(m.jid, {
+          video: videoBuffer,
+          caption: captionText,
+        }, { quoted: m });
+      }
 
-👤 User : @${res.author?.unique_id || "unknown"}
-📝 Name : ${res.author?.nickname || "unknown"}
+      await m.react('✅');
 
-🎚 Quality : HD
-⏱ Duration : ${res.duration || 0}s
-
-❤️ Likes : ${res.like_count || 0}
-💬 Comments : ${res.comment_count || 0}
-👀 Views : ${res.play_count || 0}
-
-📥 Downloaded Successfully
-`;
-
-      await client.sendMessage(
-        m.jid,
-        {
-          video: buffer,
-          caption,
-        },
-        { quoted: m }
-      );
-
-      await m.react("✅");
     } catch (error) {
-      await m.react("❌");
+      await m.react('❌');
       console.error("TikTok error:", error);
-
-      await client.sendMessage(
-        m.jid,
-        {
-          text: `❌ Error: ${error.message}`,
-        },
-        { quoted: m }
-      );
+      let errorMsg = error.message.includes("timeout")
+        ? "❌ *Timeout:* Server took too long."
+        : `❌ *Error:* ${error.message}`;
+      await client.sendMessage(m.jid, { text: errorMsg }, { quoted: m });
     }
   }
 );
