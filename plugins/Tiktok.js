@@ -1,4 +1,4 @@
-🖤const { Sparky, isPublic } = require("../lib");
+const { Sparky, isPublic } = require("../lib");
 const axios = require("axios");
 const https = require("https");
 
