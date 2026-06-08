@@ -35,18 +35,20 @@ Sparky({
     }
 
     try {
-
         let mode = "normal";
         let targetInput;
         let caption = "";
 
-        if (args[0] === "doc" || args[0] === "cc") {
-            mode = args[0];
-            targetInput = args[1];
-            caption = args.slice(2).join(" ");
+        // args එක String එකක් නම් Array එකක් බවට පත් කරගැනීම (පැරණි දෝෂය නිවැරදි කිරීම)
+        const argsArray = Array.isArray(args) ? args : (args ? args.split(" ") : []);
+
+        if (argsArray[0] === "doc" || argsArray[0] === "cc") {
+            mode = argsArray[0];
+            targetInput = argsArray[1];
+            caption = argsArray.slice(2).join(" ");
         } else {
-            targetInput = args[0];
-            caption = args.slice(1).join(" ");
+            targetInput = argsArray[0];
+            caption = argsArray.slice(1).join(" ");
         }
 
         if (!targetInput)
@@ -58,103 +60,68 @@ Sparky({
             .filter(Boolean)
             .map(x => {
                 if (x.endsWith("@g.us")) return x;
-
                 x = x.replace(/\D/g, "");
-
                 return `${x}@s.whatsapp.net`;
             });
 
-        await client.sendMessage(
-            m.jid,
-            {
-                react: {
-                    text: "📤",
-                    key: m.key
-                }
-            }
-        );
+        // ඉලක්කගත අංක කිසිවක් නැත්නම් මෙතනින් නතර කරයි
+        if (targets.length === 0) {
+            return m.reply("❌ වලංගු දුරකථන අංකයක් හෝ Group ID එකක් ඇතුළත් කරන්න.");
+        }
+
+        await client.sendMessage(m.jid, { react: { text: "📤", key: m.key } });
 
         let success = 0;
 
         for (const jid of targets) {
 
+            // --- 1. DOCUMENT MODE ---
             if (mode === "doc") {
+                // Text මැසේජ් එකක් doc කරන්න හැදුවොත් වළක්වයි
+                if (!quoted.download) {
+                    await m.reply("❌ මෙය මාධ්‍ය (Media) ගොනුවක් නොවේ. Document ලෙස යැවිය නොහැක.");
+                    continue;
+                }
 
                 const buffer = await quoted.download();
-
                 await client.sendMessage(jid, {
                     document: buffer,
-                    mimetype:
-                        quoted.mimetype ||
-                        "application/octet-stream",
-                    fileName:
-                        quoted.fileName ||
-                        `file_${Date.now()}`
+                    mimetype: quoted.mimetype || "application/octet-stream",
+                    fileName: quoted.fileName || `file_${Date.now()}`
                 });
 
                 success++;
                 continue;
             }
 
-            if (
-                mode === "cc" &&
-                caption &&
-                quoted.message
-            ) {
+            // --- 2. CAPTION CHANGE MODE ---
+            if (mode === "cc" && caption && quoted.message) {
+                const msgType = Object.keys(quoted.message)[0];
+                const copied = JSON.parse(JSON.stringify(quoted));
 
-                const msgType =
-                    Object.keys(quoted.message)[0];
+                if (copied.message[msgType]) {
+                    // text messages වලට caption නැති නිසා image/video දැයි බලයි
+                    if (copied.message[msgType].caption !== undefined || msgType === "imageMessage" || msgType === "videoMessage") {
+                        copied.message[msgType].caption = caption;
+                    }
 
-                const copied = JSON.parse(
-                    JSON.stringify(quoted)
-                );
-
-                if (
-                    copied.message[msgType]
-                ) {
-
-                    copied.message[msgType].caption =
-                        caption;
-
-                    await client.copyNForward(
-                        jid,
-                        copied,
-                        true,
-                        {
-                            readViewOnce: true
-                        }
-                    );
-
+                    await client.copyNForward(jid, copied, true, { readViewOnce: true });
                     success++;
                     continue;
                 }
             }
 
-            await client.copyNForward(
-                jid,
-                quoted,
-                true,
-                {
-                    readViewOnce: true
-                }
-            );
-
+            // --- 3. NORMAL MODE ---
+            await client.copyNForward(jid, quoted, true, { readViewOnce: true });
             success++;
         }
 
-        await client.sendMessage(
-            m.jid,
-            {
-                react: {
-                    text: "✅",
-                    key: m.key
-                }
-            }
-        );
+        // සාර්ථකව අවසන් වූ පසු ප්‍රතිචාරය
+        await client.sendMessage(m.jid, { react: { text: "✅", key: m.key } });
 
         return m.reply(`
 ╭━━━〔 FORWARD SUCCESS 〕━━━⬣
-┃ 📤 Sent : ${success}
+┃ 📤 Sent : ${success} / ${targets.length}
 ┃ 🚀 Mode : ${mode.toUpperCase()}
 ┃ 👁️ ViewOnce : Bypassed
 ┃ 💎 Quality : Original
@@ -162,21 +129,9 @@ Sparky({
         `);
 
     } catch (e) {
-
         console.log(e);
-
-        await client.sendMessage(
-            m.jid,
-            {
-                react: {
-                    text: "❌",
-                    key: m.key
-                }
-            }
-        );
-
-        return m.reply(
-            `❌ Error:\n${e.message}`
-        );
+        await client.sendMessage(m.jid, { react: { text: "❌", key: m.key } });
+        return m.reply(`❌ Error:\n${e.message}`);
     }
 });
+
