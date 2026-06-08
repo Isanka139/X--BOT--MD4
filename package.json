@@ -38,6 +38,5 @@
     "qs": "latest",
     "sequelize": "^6.23.0",
     "simple-git": "^3.27.0"
-    "@whiskeysockets/baileys": "^6.7.9"
   }
 }
