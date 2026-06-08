@@ -1,100 +1,182 @@
 const { Sparky, isPublic } = require("../lib");
 
 Sparky({
-    name: "forward",
+    name: "fwd",
     alias: ["forward", "fv", "sf"],
     category: "utility",
     fromMe: isPublic,
-    desc: "Pro Forward - Caption, Doc, ViewOnce bypass + Multi target"
+    desc: "Advanced Forward System"
 }, async ({ client, m, args }) => {
 
     const quoted = m.quoted;
+
     if (!quoted) {
-        return m.reply(`📎 **Pro Forward Commands**
+        return m.reply(`
+📤 *Forward Menu*
 
-**1.** *.fwd* → ඔයාටම save
-**2.** *.fwd 9477xxxxxxx* → Number එකට
-**3.** *.fwd 1203@g.us* → Group එකට
-**4.** *.fwd doc 9477* → Document විදිහට
-**5.** *.fwd cc 9477* → Caption එක්කම forward
-**6.** *.fwd 9477,9478* → එකපාර 2කට forward
+.fwd
+→ Save to yourself
 
-💎 *ViewOnce, Sticker, Audio, Apk සේරම support*`);
+.fwd 9477xxxxxxx
+→ Forward to number
+
+.fwd 1203@g.us
+→ Forward to group
+
+.fwd doc 9477xxxxxxx
+→ Send as document
+
+.fwd cc 9477xxxxxxx New Caption
+→ Forward with new caption
+
+.fwd 9477xxxxxxx,9478xxxxxxx
+→ Multi Forward
+        `);
     }
 
-    let target = args[0];
-    let option = args[1];
-    let caption = args.slice(2).join(" ");
-
-    if (!target) target = m.sender;
-
-    // Multi target support: 9477,9478,1203@g.us
-    let targets = target.split(',').map(t => {
-        t = t.trim();
-        if (t.includes('@g.us')) return t;
-        return t.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
-    });
-
-    await client.sendMessage(m.jid, { react: { text: "📤", key: m.key } });
-
     try {
-        let successCount = 0;
 
-        for (let targetJid of targets) {
-            let forwardMsg = quoted;
+        let mode = "normal";
+        let targetInput;
+        let caption = "";
 
-            // Option 1: Document විදිහට forward
-            if (option === 'doc') {
-                let buffer = await quoted.download();
-                let mimetype = quoted.mimetype || 'application/octet-stream';
-                let filename = quoted.fileName || 'file.bin';
+        if (args[0] === "doc" || args[0] === "cc") {
+            mode = args[0];
+            targetInput = args[1];
+            caption = args.slice(2).join(" ");
+        } else {
+            targetInput = args[0];
+            caption = args.slice(1).join(" ");
+        }
 
-                await client.sendMessage(targetJid, {
+        if (!targetInput)
+            targetInput = m.sender.split("@")[0];
+
+        const targets = targetInput
+            .split(",")
+            .map(x => x.trim())
+            .filter(Boolean)
+            .map(x => {
+                if (x.endsWith("@g.us")) return x;
+
+                x = x.replace(/\D/g, "");
+
+                return `${x}@s.whatsapp.net`;
+            });
+
+        await client.sendMessage(
+            m.jid,
+            {
+                react: {
+                    text: "📤",
+                    key: m.key
+                }
+            }
+        );
+
+        let success = 0;
+
+        for (const jid of targets) {
+
+            if (mode === "doc") {
+
+                const buffer = await quoted.download();
+
+                await client.sendMessage(jid, {
                     document: buffer,
-                    mimetype: mimetype,
-                    fileName: filename,
-                    caption: caption || ''
+                    mimetype:
+                        quoted.mimetype ||
+                        "application/octet-stream",
+                    fileName:
+                        quoted.fileName ||
+                        `file_${Date.now()}`
                 });
-                successCount++;
+
+                success++;
                 continue;
             }
 
-            // Option 2: Caption Change කරලා forward
-            if (option === 'cc' && caption) {
-                forwardMsg = {
-                   ...quoted,
-                    message: {
-                       ...quoted.message,
-                        [Object.keys(quoted.message)[0]]: {
-                           ...quoted.message[Object.keys(quoted.message)[0]],
-                            caption: caption
+            if (
+                mode === "cc" &&
+                caption &&
+                quoted.message
+            ) {
+
+                const msgType =
+                    Object.keys(quoted.message)[0];
+
+                const copied = JSON.parse(
+                    JSON.stringify(quoted)
+                );
+
+                if (
+                    copied.message[msgType]
+                ) {
+
+                    copied.message[msgType].caption =
+                        caption;
+
+                    await client.copyNForward(
+                        jid,
+                        copied,
+                        true,
+                        {
+                            readViewOnce: true
                         }
-                    }
-                };
+                    );
+
+                    success++;
+                    continue;
+                }
             }
 
-            // Normal forward - No Download
-            await client.copyNForward(targetJid, forwardMsg, true, {
-                readViewOnce: true,
-                contextInfo: { isForwarded: true }
-            });
-            successCount++;
+            await client.copyNForward(
+                jid,
+                quoted,
+                true,
+                {
+                    readViewOnce: true
+                }
+            );
+
+            success++;
         }
 
-        await client.sendMessage(m.jid, { react: { text: "✅", key: m.key } });
+        await client.sendMessage(
+            m.jid,
+            {
+                react: {
+                    text: "✅",
+                    key: m.key
+                }
+            }
+        );
 
-        await m.reply(`✅ **Forward Success!**
+        return m.reply(`
+╭━━━〔 FORWARD SUCCESS 〕━━━⬣
+┃ 📤 Sent : ${success}
+┃ 🚀 Mode : ${mode.toUpperCase()}
+┃ 👁️ ViewOnce : Bypassed
+┃ 💎 Quality : Original
+╰━━━━━━━━━━━━━━━━━━⬣
+        `);
 
-📤 **Sent to:** ${successCount} target(s)
-🚀 **Mode:** ${option === 'doc'? 'Document' : 'Direct Forward'}
-⚡ **ViewOnce:** Bypassed
-💎 **Quality:** Original
+    } catch (e) {
 
-*X-KADIYA-MD Pro Forward*`);
+        console.log(e);
 
-    } catch (err) {
-        console.error(err);
-        await client.sendMessage(m.jid, { react: { text: "❌", key: m.key } });
-        return m.reply(`⚠️ **Error:** ${err.message}`);
+        await client.sendMessage(
+            m.jid,
+            {
+                react: {
+                    text: "❌",
+                    key: m.key
+                }
+            }
+        );
+
+        return m.reply(
+            `❌ Error:\n${e.message}`
+        );
     }
 });
