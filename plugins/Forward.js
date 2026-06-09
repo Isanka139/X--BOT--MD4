@@ -9,6 +9,7 @@ Sparky({
 }, async ({ client, m, args }) => {
 
     const quoted = m.quoted;
+    const imageUrl = "https://files.catbox.moe/8gd2kj.jpg";
 
     if (!quoted) {
         return m.reply(`
@@ -31,6 +32,17 @@ Sparky({
 
 .fwd 9477xxxxxxx,9478xxxxxxx
 → Multi Forward
+
+---
+
+💡 *මෙම ප්ලගිනයෙන් (Plugin) ඔබට ලැබෙන ප්‍රයෝජන:*
+
+* 👁️ **ViewOnce Bypass:** "එක් වරක් පමණක් බැලිය හැකි" (View Once) ලෙස එවා ඇති ඡායාරූප හෝ වීඩියෝ සාමාන්‍ය ආකාරයෙන් ඕනෑම අයෙකුට Forward කිරීමට මෙයින් හැකියාව ලැබේ.
+* 🚀 **Multi Forwarding:** කොමා ( , ) ලකුණ මඟින් වෙන් කර එකවර දුරකථන අංක හෝ ගෘෘප් කිහිපයකට පණිවිඩ යැවිය හැක.
+* 📁 **Media to Document:** ඕනෑම Photo එකක් හෝ Video එකක් Quality එක අඩු නොවී Document (.doc) එකක් ලෙස Forward කළ හැක.
+* ✍️ **Custom Caption:** මුල් පණිවිඩයේ ඇති Caption එක වෙනස් කර ඔබ කැමති අලුත් Caption එකක් සමඟ Forward කිරීමට හැකියාව ඇත.
+
+Powered by ❖Ƭʜᴇ 𝐗-𝐊𝐀𝐃𝐈𝐘𝐀-𝐌𝐃 💎
         `);
     }
 
@@ -85,7 +97,16 @@ Sparky({
                 await client.sendMessage(jid, {
                     document: buffer,
                     mimetype: quoted.mimetype || "application/octet-stream",
-                    fileName: quoted.fileName || `file_${Date.now()}`
+                    fileName: quoted.fileName || `file_${Date.now()}`,
+                    contextInfo: {
+                        externalAdReply: {
+                            title: "Advanced Forward System",
+                            body: "Powered by ❖Ƭʜᴇ 𝐗-𝐊𝐀𝐃𝐈𝐘𝐀-𝐌𝐃 💎",
+                            thumbnailUrl: imageUrl,
+                            sourceUrl: "https://whatsapp.com",
+                            mediaType: 1
+                        }
+                    }
                 });
 
                 success++;
@@ -106,51 +127,21 @@ Sparky({
                         copied[msgType].viewOnce = false;
                     }
 
-                    // වඩාත්ම ස්ථාවර forward ක්‍රමය
+                    // ContextInfo එකතු කිරීම
+                    copied[msgType].contextInfo = {
+                        ...copied[msgType].contextInfo,
+                        externalAdReply: {
+                            title: "Advanced Forward System",
+                            body: "Powered by ❖Ƭʜᴇ 𝐗-𝐊𝐀𝐃𝐈𝐘𝐀-𝐌𝐃 💎",
+                            thumbnailUrl: imageUrl,
+                            sourceUrl: "https://whatsapp.com",
+                            mediaType: 1
+                        }
+                    };
+
                     await client.sendMessage(jid, { forward: { key: m.quoted.key, message: copied } });
                     success++;
                     continue;
                 }
             }
-
-            // --- 3. NORMAL FORWARD MODE (.fwd) ---
-            if (quoted.message) {
-                const msgType = Object.keys(quoted.message)[0];
-                const copied = JSON.parse(JSON.stringify(quoted.message));
-
-                // ViewOnce bypass කිරීම
-                if (copied[msgType] && copied[msgType].viewOnce) {
-                    copied[msgType].viewOnce = false;
-                }
-
-                // relayMessage වෙනුවට ක්‍රැෂ් නොවන, නිල Baileys forward object එක භාවිතය
-                await client.sendMessage(jid, { 
-                    forward: { 
-                        key: m.quoted.key, 
-                        message: copied 
-                    } 
-                });
-                
-                success++;
-            }
-        }
-
-        // සාර්ථක ප්‍රතිචාරය දක්වන්න
-        await client.sendMessage(m.jid, { react: { text: "✅", key: m.key } });
-
-        return m.reply(`
-╭━━━〔 FORWARD SUCCESS 〕━━━⬣
-┃ 📤 Sent : ${success} / ${targets.length}
-┃ 🚀 Mode : ${mode.toUpperCase()}
-┃ 👁️ ViewOnce : Bypassed
-┃ 💎 Quality : Original
-╰━━━━━━━━━━━━━━━━━━⬣
-        `);
-
-    } catch (e) {
-        console.log(e);
-        await client.sendMessage(m.jid, { react: { text: "❌", key: m.key } });
-        return m.reply(`❌ Error:\n${e.message}`);
-    }
-});
 
