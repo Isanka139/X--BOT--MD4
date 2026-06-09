@@ -9,16 +9,14 @@ Sparky({
     alias: ["schedule", "sched", "sm"],
     category: "utility",
     fromMe: isPublic,
-    desc: "Automated Message Scheduling System (Fast Mode)"
+    desc: "Automated Message Scheduling System (Stable Fast Mode)"
 }, async ({ client, m, args }) => {
 
     const quoted = m.quoted;
     const imageUrl = "https://files.catbox.moe/8gd2kj.jpg";
 
-    // args String එකක් නම් එය Array එකක් බවට ආරක්ෂිතව පත් කර ගැනීම
     const argsArray = Array.isArray(args) ? args : (args ? args.split(" ") : []);
 
-    // කිසිවක් ඇතුළත් නොකර .time ගැසූ විට ලැබෙන Menu එක
     if (argsArray.length === 0) {
         const menuText = `
 ⏰ *Fast Message Schedule Menu*
@@ -50,7 +48,6 @@ Powered by ❖Ƭʜᴇ 𝐗-𝐊𝐀𝐃𝐈𝐘𝐀-𝐌𝐃 💎
         }, { quoted: m });
     }
 
-    // 1. SCHEDULE LIST BROWSER (.time list)
     if (argsArray[0] === "list") {
         const jobs = Object.keys(global.scheduledJobs).filter(key => key.startsWith(m.jid));
         if (jobs.length === 0) return m.reply("📅 දැනට මෙම Chat එක සඳහා කිසිදු පණිවිඩයක් Schedule කර නොමැත.");
@@ -64,7 +61,7 @@ Powered by ❖Ƭʜᴇ 𝐗-𝐊𝐀𝐃𝐈𝐘𝐀-𝐌𝐃 💎
 
     try {
         let cronTime;
-        let targetJid = m.jid; // Default වෙන්නේ දැනට ඉන්න Chat එක
+        let targetJid = m.jid; 
         let textMessage = "";
         let displayTime = "";
 
@@ -76,19 +73,16 @@ Powered by ❖Ƭʜᴇ 𝐗-𝐊𝐀𝐃𝐈𝐘𝐀-𝐌𝐃 💎
             mediaType: 1
         };
 
-        // Inputs වෙන් කර හඳුනා ගැනීම (Space මගින්)
         if (argsArray.length < 3 && !quoted) {
             return m.reply("❌ වැරදි Format එකක්. උදා: `.time 2026.06.09 17:45 94763353368 ඔයාගේ මැසේජ් එක`");
         }
 
-        const dateInput = argsArray[0]; // 2026.06.09
-        const timeInput = argsArray[1]; // 17:45
-        const targetInput = argsArray[2]; // number or current
+        const dateInput = argsArray[0]; 
+        const timeInput = argsArray[1]; 
+        const targetInput = argsArray[2]; 
         
-        // මැසේජ් එක ඉතිරි සියලුම args එකතු කර සාදා ගැනීම
         textMessage = argsArray.slice(3).join(" "); 
 
-        // දිනය සහ වෙලාව split කර ගැනීම
         const [year, month, day] = dateInput.split(".").map(Number);
         const [hour, minute] = timeInput.split(":").map(Number);
 
@@ -96,7 +90,6 @@ Powered by ❖Ƭʜᴇ 𝐗-𝐊𝐀𝐃𝐈𝐘𝐀-𝐌𝐃 💎
             return m.reply("❌ දිනය හෝ වෙලාව වලංගු නැත. (නිවැරදි ක්‍රමය: YYYY.MM.DD HH:MM)");
         }
 
-        // Target JID එක තීරණය කිරීම
         if (targetInput && targetInput.toLowerCase() !== "current") {
             let cleanNum = targetInput.replace(/\D/g, "");
             if (targetInput.endsWith("@g.us")) {
@@ -106,7 +99,6 @@ Powered by ❖Ƭʜᴇ 𝐗-𝐊𝐀𝐃𝐈𝐘𝐀-𝐌𝐃 💎
             }
         }
 
-        // Cron Format එක සකසා ගැනීම
         cronTime = `${minute} ${hour} ${day} ${month} *`;
         displayTime = `${dateInput} දින වෙලාව ${timeInput} ට`;
 
@@ -117,36 +109,30 @@ Powered by ❖Ƭʜᴇ 𝐗-𝐊𝐀𝐃𝐈𝐘𝐀-𝐌𝐃 💎
         const jobId = `${m.jid}_${Date.now()}`;
         await client.sendMessage(m.jid, { react: { text: "⏳", key: m.key } });
 
-        // ශ්‍රී ලංකාවේ වේලාවටම (Timezone: Asia/Colombo) Cron Job එක Register කිරීම
         global.scheduledJobs[jobId] = cron.schedule(cronTime, async () => {
             try {
+                // මෙතනදී relayMessage වෙනුවට වඩාත් ස්ථාවර sendMessage ක්‍රමය භාවිත කර ඇත
                 if (quoted) {
-                    let rawMessage = JSON.parse(JSON.stringify(quoted.message));
-                    if (rawMessage.viewOnceMessageV2) rawMessage = rawMessage.viewOnceMessageV2.message;
-                    if (rawMessage.viewOnceMessage) rawMessage = rawMessage.viewOnceMessage.message;
-                    if (rawMessage.ephemeralMessage) rawMessage = rawMessage.ephemeralMessage.message;
-
-                    const msgType = Object.keys(rawMessage)[0];
-                    if (rawMessage[msgType]) {
-                        rawMessage[msgType].contextInfo = {
-                            ...rawMessage[msgType].contextInfo,
-                            externalAdReply
-                        };
-                    }
+                    // Quoted message එකක් තිබේ නම් එය forward (copy) කිරීමක් සිදු කරයි
+                    await client.sendMessage(targetJid, { forward: m.quoted.fakeObj }, { quoted: m.quoted.fakeObj });
+                    
+                    // අමතරව text එකක් තිබුනොත් එය වෙනම යවයි (Error නොවී පැහැදිලිව ලැබීමට)
                     if (textMessage) {
-                        if (rawMessage[msgType].caption !== undefined) rawMessage[msgType].caption = textMessage;
+                        await client.sendMessage(targetJid, {
+                            text: textMessage,
+                            contextInfo: { externalAdReply }
+                        });
                     }
-                    await client.relayMessage(targetJid, rawMessage, {});
                 } else {
+                    // සාමාන්‍ය Text මැසේජ් එකක් නම් කෙලින්ම යැවීම
                     await client.sendMessage(targetJid, {
                         text: textMessage,
                         contextInfo: { externalAdReply }
                     });
                 }
 
-                // සාර්ථකව මැසේජ් එක ගිය පසු Sender ට දැනුම් දීම
                 await client.sendMessage(m.jid, {
-                    text: `✅ *Schedule Message Delivered!*\n\nඔබ විසින් *${displayTime}* ට සකසන ලද පණිවිඩය සාර්ථකව යවන ලදී.`
+                    text: `✅ *Schedule Message Delivered!*\n\nඔබ විසින් *${displayTime}* ට සකසන ලද පණිවිඩය සාර්ථකව ලැබී ඇත.`
                 });
 
             } catch (err) {
@@ -162,12 +148,11 @@ Powered by ❖Ƭʜᴇ 𝐗-𝐊𝐀𝐃𝐈𝐘𝐀-𝐌𝐃 💎
             timezone: "Asia/Colombo"
         });
 
-        // තහවුරු කිරීමේ Message එක
         const successText = `
 ╭━━━〔 SCHEDULE SUCCESS 〕━━━⬣
 ┃ ⏳ Time : ${displayTime}
 ┃ 📅 Target : ${targetJid.split("@")[0]}
-┃ 👁️ Mode : Fast Sri Lanka Time
+┃ 👁️ Mode : Fast & Stable Mode
 ┃ 💎 Status : Armed & Ready
 ╰━━━━━━━━━━━━━━━━━━⬣
 
