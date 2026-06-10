@@ -25,7 +25,7 @@ Sparky(
     name: "tt",
     fromMe: isPublic,
     category: "downloader",
-    desc: "Download TikTok videos using Zanta API",
+    desc: "Download TikTok videos without API Key",
   },
   async ({ m, client, args }) => {
     try {
@@ -49,30 +49,31 @@ Sparky(
 
       await m.react("⏳");
 
-      // 🔑 ඔයාගේ API Key එක කෙලින්ම URL එක ඇතුලටම දාලා තියෙන්නේ මෙතනට:
+      // API Key අවශ්‍ය නොවන ස්ථාවර මුලශ්‍රයක් භාවිතය
       let response;
       try {
-        response = await axios.get(`https://api.lolhuman.xyz/api/tiktok?apikey=zanta_6xeM2XzKaDSDKLwRhOP85mYv&url=${encodeURIComponent(tiktokUrl)}`, {
+        response = await axios.get(`https://api.vreden.web.id/api/tiktok?url=${encodeURIComponent(tiktokUrl)}`, {
           httpsAgent,
           timeout: 15000,
         });
       } catch (err) {
-        throw new Error("TikTok API request failed. Check your API key or limit.");
+        throw new Error("TikTok API request failed. Try again later.");
       }
 
       const result = response?.data?.result;
 
       if (!result) {
-        throw new Error("No video data found. API might be down or key expired.");
+        throw new Error("No video data found.");
       }
 
-      const videoUrl = result.link || result.no_watermark || result.watermark;
+      // Watermark රහිත වීඩියෝ ලින්ක් එක තෝරා ගැනීම
+      const videoUrl = result.video?.noWatermark || result.video?.watermark || result.play;
 
       if (!videoUrl) {
         throw new Error("No downloadable video URL found.");
       }
 
-      const quality = result.no_watermark || result.link
+      const quality = result.video?.noWatermark
         ? "High Quality (No Watermark) ✅"
         : "Normal Quality ⚠️";
 
@@ -97,7 +98,7 @@ Sparky(
 ✨ *Quality:* ${quality}
 📦 *Size:* ${sizeMB} MB
 
-🤖 _Downloaded via ❖Ƭʜะ 𝐗-𝐊𝐀registered𝐈𝐘𝐀-𝐌𝐃 💎_
+🤖 _Downloaded via ❖Ƭʜᴇ 𝐗-𝐊𝐀registered𝐈𝐘𝐀-𝐌𝐃 💎_
       `.trim();
 
       const payload =
@@ -133,4 +134,3 @@ Sparky(
     }
   }
 );
-
