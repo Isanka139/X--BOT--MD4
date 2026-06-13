@@ -1,7 +1,6 @@
 const { Sparky, isPublic } = require("../lib");
 const axios = require("axios");
 const { Sticker, StickerTypes } = require("wa-sticker-formatter");
-const emojiRegex = require("emoji-regex");
 
 // Local Simple Database
 const db = {
@@ -10,20 +9,27 @@ const db = {
     userCounts: {}
 };
 
-// Image Buffer එකක් WhatsApp Sticker එකක් බවට පත් කරන Helper Function
+// Sticker සාදන සුරක්ෂිත Helper Function එක
 async function createSticker(buffer, packname = "Emoji Kitchen", author = "Sparky-Bot") {
     try {
         const sticker = new Sticker(buffer, {
             pack: packname,
             author: author,
             type: StickerTypes.FULL,
-            quality: 70
+            quality: 60 // Quality එක තරමක් අඩු කලා වේගවත් වීමට සහ Error අවම වීමට
         });
         return await sticker.toBuffer();
     } catch (e) {
-        console.error("Sticker Creation Error:", e.message);
+        console.error("Sticker Formatter Error:", e.message);
         return null;
     }
+}
+
+// Array එකකින් ඉමෝජි පමණක් වෙන් කරගන්නා සරල ශ්‍රිතයක්
+function extractEmojis(text) {
+    // සරලව text එක ඇතුළේ තියෙන හැම අක්ෂරයක්ම වෙන් කර ඉමෝජි පරීක්ෂා කරයි
+    const regex = /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu;
+    return text.match(regex);
 }
 
 // ==========================================
@@ -36,12 +42,10 @@ Sparky({
     fromMe: isPublic,
     desc: "Combine 2 emojis to make a custom sticker"
 }, async ({ client, m, args }) => {
-    const text = args.join(" ");
-    
-    // ඉමෝජි වෙන්කර හඳුනාගැනීම
-    const regex = emojiRegex();
-    const emojis = text.match(regex);
+    const text = args.join(" ").trim();
+    const emojis = extractEmojis(text);
 
+    // ඉමෝජි 2ක් නැත්නම් Error පණිවිඩය දේ
     if (!emojis || emojis.length < 2) {
         await client.sendMessage(m.jid, { react: { text: "❓", key: m.key } });
         return await m.reply(`╭─「 *📦 EMOJI KITCHEN* 」\n│\n├ *Usage:* .mix 😎 🐱\n├ *Example:* .mix ❤️ 🔥\n│\n╰─ Powered by Sparky ✨`);
@@ -49,37 +53,48 @@ Sparky({
 
     await client.sendMessage(m.jid, { react: { text: "⏳", key: m.key } });
     
-    // ඔයා දුන්න නව සරල API Endpoint එක (Size එක 512 ලෙස ලබාදී ඇත)
-    const apiUrl = `https://emojik.vercel.app/s/${encodeURIComponent(emojis[0])}_${encodeURIComponent(emojis[1])}?size=512`;
+    // Vercel API Endpoint එක (පළමු ඉමෝජි දෙක පමණක් ගනී)
+    const emo1 = emojis[0];
+    const emo2 = emojis[1];
+    const url = `https://emojik.vercel.app/s/${encodeURIComponent(emo1 + emo2)}?size=512`;
 
     try {
-        const response = await axios.get(apiUrl, { responseType: 'arraybuffer', timeout: 8000 });
+        // API එකෙන් Image Buffer එක ලබාගැනීම
+        const response = await axios.get(url, { 
+            responseType: 'arraybuffer', 
+            timeout: 10000,
+            headers: { 'User-Agent': 'Mozilla/5.0' } // API Block වීම් වැලැක්වීමට
+        });
 
-        if (!response || !response.data) {
+        if (!response || !response.data || response.data.length < 100) {
             await client.sendMessage(m.jid, { react: { text: "❌", key: m.key } });
-            return await m.reply(`❌ කණගාටුයි, [ ${emojis[0]} + ${emojis[1]} ] එකතුව සඳහා ස්ටිකරයක් නොමැත.`);
+            return await m.reply(`❌ කණගාටුයි, [ ${emo1} + ${emo2} ] එකතුව සඳහා ස්ටිකරයක් නිර්මාණය කිරීමට Google Kitchen ඉඩ නොදේ.`);
         }
 
-        // Gamification Stats යාවත්කාලීන කිරීම
+        // Stats Update
         const sender = m.sender;
         db.userCounts[sender] = (db.userCounts[sender] || 0) + 1;
         
         const group = m.jid;
         if (!db.groupStats[group]) db.groupStats[group] = {};
-        const comboKey = `${emojis[0]}${emojis[1]}`;
+        const comboKey = `${emo1}${emo2}`;
         db.groupStats[group][comboKey] = (db.groupStats[group][comboKey] || 0) + 1;
 
-        // Sticker එකක් බවට හැරවීම
+        // WebP Sticker එකක් බවට හැරවීම
         const stickerBuffer = await createSticker(response.data, "Emoji Kitchen", "Sparky Bot");
         
-        if (!stickerBuffer) throw new Error("Sticker buffer is empty");
+        if (!stickerBuffer) {
+            await client.sendMessage(m.jid, { react: { text: "❌", key: m.key } });
+            return await m.reply(`❌ ස්ටිකර් පරිවර්තනය (WebP Conversion) අසාර්ථක විය. කරුණාකර වෙනත් ඉමෝජි දෙකක් බලන්න.`);
+        }
 
         await client.sendMessage(m.jid, { react: { text: "🍳", key: m.key } });
         await client.sendMessage(m.jid, { sticker: stickerBuffer }, { quoted: m });
 
     } catch (err) {
+        console.error("Mix Command Error:", err.message);
         await client.sendMessage(m.jid, { react: { text: "❌", key: m.key } });
-        return await m.reply(`❌ කණගාටුයි, ඔය ඉමෝජි යුගල එකතු කිරීමට මෙම API එක සහය නොදක්වයි.`);
+        return await m.reply(`❌ ඔය ඉමෝජි දෙක එකතු කිරීමට Google Kitchen සහය දක්වන්නේ නැත.`);
     }
 });
 
@@ -102,11 +117,13 @@ Sparky({
         rand2 = popularEmojis[Math.floor(Math.random() * popularEmojis.length)];
     }
 
-    const apiUrl = `https://emojik.vercel.app/s/${encodeURIComponent(rand1)}_${encodeURIComponent(rand2)}?size=512`;
+    const url = `https://emojik.vercel.app/s/${encodeURIComponent(rand1 + rand2)}?size=512`;
 
     try {
-        const response = await axios.get(apiUrl, { responseType: 'arraybuffer', timeout: 6000 });
+        const response = await axios.get(url, { responseType: 'arraybuffer', timeout: 8000 });
         const stickerBuffer = await createSticker(response.data, `Random: ${rand1} + ${rand2}`);
+        if (!stickerBuffer) return await m.reply("🎲 ස්ටිකර් පරිවර්තන දෝෂයකි. නැවත උත්සාහ කරන්න.");
+        
         await client.sendMessage(m.jid, { sticker: stickerBuffer }, { quoted: m });
     } catch {
         return await m.reply("🎲 ලැබුණු සසම්භාවී එකතුව අසාර්ථකයි. කරුණාකර නැවත `.randommix` යොදන්න.");
@@ -128,8 +145,7 @@ Sparky({
     const name = args.join(" ").trim();
     if (!name) return await m.reply("❌ කරුණාකර මෙම එකතුව සුරැකීමට නමක් ලබාදෙන්න. (.savemix මගේම)");
 
-    const regex = emojiRegex();
-    const emojis = quotedText.match(regex);
+    const emojis = extractEmojis(quotedText);
     if (!emojis || emojis.length < 2) return await m.reply("❌ Reply කරන ලද පණිවිඩය තුළ ඉමෝජි යුගලක් සොයාගත නොහැක.");
 
     if (!db.favorites[m.sender]) db.favorites[m.sender] = {};
@@ -155,10 +171,10 @@ Sparky({
     }
 
     const [emo1, emo2] = db.favorites[m.sender][name];
-    const apiUrl = `https://emojik.vercel.app/s/${encodeURIComponent(emo1)}_${encodeURIComponent(emo2)}?size=512`;
+    const url = `https://emojik.vercel.app/s/${encodeURIComponent(emo1 + emo2)}?size=512`;
 
     try {
-        const response = await axios.get(apiUrl, { responseType: 'arraybuffer' });
+        const response = await axios.get(url, { responseType: 'arraybuffer' });
         const stickerBuffer = await createSticker(response.data, `Fav: ${name}`);
         await client.sendMessage(m.jid, { sticker: stickerBuffer }, { quoted: m });
     } catch {
