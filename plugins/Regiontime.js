@@ -30,57 +30,54 @@ Sparky({
     desc: "ඕනෑම රටක වත්මන් වේලාව ලබා ගැනීම"
 }, async ({ client, m, args }) => {
     try {
-        // පරිශීලකයා ඇතුලත් කරන රට ලබා ගැනීම
         const input = Array.isArray(args) ? args.join(" ") : String(args || "");
         const country = input.trim().toLowerCase();
 
-        // භාෂා 3න්ම රටවල් සහ ඒවායේ Timezone + Locale ලැයිස්තුව
         const timezones = {
-            // --- Sri Lanka ---
             'ලංකාව': { zone: 'Asia/Colombo', locale: 'si-LK' },
             'இலங்கை': { zone: 'Asia/Colombo', locale: 'ta-LK' },
             'srilanka': { zone: 'Asia/Colombo', locale: 'en-US' },
             'sl': { zone: 'Asia/Colombo', locale: 'en-US' },
-
-            // --- India ---
             'ඉන්දියාව': { zone: 'Asia/Kolkata', locale: 'si-LK' },
             'இந்தியா': { zone: 'Asia/Kolkata', locale: 'ta-IN' },
             'india': { zone: 'Asia/Kolkata', locale: 'en-US' },
-
-            // --- USA ---
             'ඇමරිකාව': { zone: 'America/New_York', locale: 'si-LK' },
             'அமெரிக்கா': { zone: 'America/New_York', locale: 'ta-LK' },
             'usa': { zone: 'America/New_York', locale: 'en-US' },
-
-            // --- UK ---
             'එංගලන්තය': { zone: 'Europe/London', locale: 'si-LK' },
             'இங்கிலாந்து': { zone: 'Europe/London', locale: 'ta-LK' },
             'uk': { zone: 'Europe/London', locale: 'en-US' },
             'london': { zone: 'Europe/London', locale: 'en-US' },
-
-            // --- Japan ---
             'ජපානය': { zone: 'Asia/Tokyo', locale: 'si-LK' },
             'ஜப்பான்': { zone: 'Asia/Tokyo', locale: 'ta-LK' },
             'japan': { zone: 'Asia/Tokyo', locale: 'en-US' },
-
-            // --- Dubai ---
             'ඩුබායි': { zone: 'Asia/Dubai', locale: 'si-LK' },
             'துபாய்': { zone: 'Asia/Dubai', locale: 'ta-LK' },
             'dubai': { zone: 'Asia/Dubai', locale: 'en-US' }
         };
 
-        // රටක් ඇතුලත් කර නොමැති නම් උදව් මැසේජ් එක පෙන්වීම
+        // 1. රටක් ඇතුලත් කර නැති විට ⚠️ React එක දැමීම
         if (!country) {
-            await m.react?.("⚠️");
-            const helpMessage = `⚠️ *Please enter a country name! / කරුණාකර රටක නමක් ඇතුලත් කරන්න! / தயவுசெய்து ஒரு நாட்டின் பெயரை உள்ளிடவும்!*
+            await client.sendMessage(m.jid, { react: { text: "⚠️", key: m.key } });
             
-📌 *Usage / භාවිතා කරන ආකාරය / பயன்படுத்தும் முறை:*
-.rtime [country_name]
+            const helpMessage = `╭─────────────────────────╮
+  ⚠️  *Attention / අවධානය / கவனம்*
+╰─────────────────────────╯
 
-💡 *Examples / උදාහරණ / உதாரணங்கள்:*
-• _.rtime ලංකාව_  |  _.rtime இலங்கை_  |  _.rtime srilanka格式_
-• _.rtime usa_  |  _.rtime ඇමරිකාව_
+💡 *Please enter a country name!*
+💡 *කරුණාකර රටක නමක් ඇතුලත් කරන්න!*
+💡 *தயவுசெய்து ஒரு நாட்டின் பெயரை உள்ளிடவும்!*
 
+──────────────
+📌 *Usage / භාවිතය / பயன்பாடு:*
+  *.rtime [country_name]*
+
+ℹ️ *Examples / උදාහරණ:*
+  • _.rtime srilanka_
+  • _.rtime ලංකාව_
+  • _.rtime இலங்கை_
+
+──────────────
 ❖Ƭʜᴇ𝐗-𝐊𝐀𝐃𝐈𝐘𝐀-𝐌𝐃 💎`;
             return await m.reply(helpMessage);
         }
@@ -88,33 +85,54 @@ Sparky({
         const target = timezones[country];
 
         if (target) {
-            await m.react?.("🕒");
+            // 2. රට නිවැරදි නම් මුලින්ම 🕒 (Loading වැනි) React එක දැමීම
+            await client.sendMessage(m.jid, { react: { text: "🕒", key: m.key } });
+            
             const currentTime = getWorldTime(target.zone, target.locale);
             
-            const replyMessage = `✨ ─── 🌍 *WORLD CLOCK / ලෝක ඔරලෝසුව* 🌍 ─── ✨
+            const replyMessage = `╭─────────────────────────╮
+  🌍  *WORLD CLOCK • ලෝක ඔරලෝසුව*
+╰─────────────────────────╯
 
-📍 *Country / රට / நாடு :* ${country.toUpperCase()}
-📅 *Date & Time / දිනය සහ වේලාව / தேதி மற்றும் நேரம் :*
-👉 ${currentTime}
+  📍 *Country / රට / நாடு :* └──  _${country.toUpperCase()}_
 
-✨ ────────────────────────── ✨
+  📅 *Date & Time / දිනය සහ වේලාව :*
+  └──  *${currentTime}*
+
+──────────────
 ❖Ƭʜᴇ𝐗-𝐊𝐀𝐃𝐈𝐘𝐀-𝐌𝐃 💎`;
 
             await client.sendMessage(m.jid, { text: replyMessage }, { quoted: m });
-            await m.react?.("✅");
+            
+            // 3. මැසේජ් එක යවා අවසන් වූ පසු ✅ React එක දැමීම
+            await client.sendMessage(m.jid, { react: { text: "✅", key: m.key } });
+            
         } else {
-            await m.react?.("❌");
-            const errorMessage = `❌ *Invalid Country / රට වැරදියි / தவறான நாடு*
+            // 4. රට වැරදි නම් ❌ React එක දැමීම
+            await client.sendMessage(m.jid, { react: { text: "❌", key: m.key } });
+            
+            const errorMessage = `╭─────────────────────────╮
+  ❌  *Error / දෝෂයකි / பிழை*
+╰─────────────────────────╯
 
-ℹ️ Try with: srilanka, ලංකාව, இலங்கை, india, usa, uk, dubai, japan...
+  ⚠️ *Invalid Country Name!*
+  ⚠️ *රටේ නම වැරදියි හෝ පද්ධතියේ නැත.*
+  ⚠️ *நாட்டின் பெயர் தவறானது.*
 
+──────────────
+💡 *Available / ගත හැකි රටවල්:*
+_sl, srilanka, ලංකාව, இலங்கை, india, usa, uk, dubai, japan..._
+
+──────────────
 ❖Ƭʜᴇ𝐗-𝐊𝐀𝐃𝐈𝐘𝐀-𝐌𝐃 💎`;
             await m.reply(errorMessage);
         }
 
     } catch (err) {
         console.log("Time plugin error:", err);
-        await m.react?.("❌");
-        await m.reply("❌ පද්ධති දෝෂයක් සිදු විය. නැවත උත්සාහ කරන්න.");
+        // 5. සිස්ටම් Error එකක් ආවොත් ❌ React එක දැමීම
+        await client.sendMessage(m.jid, { react: { text: "❌", key: m.key } });
+        await m.reply("❌ *පද්ධති දෝෂයක් සිදු විය. නැවත උත්සාහ කරන්න.*");
     }
 });
+
