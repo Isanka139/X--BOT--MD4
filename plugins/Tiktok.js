@@ -3,99 +3,109 @@ const axios = require("axios");
 
 Sparky(
 {
-    name: "tt",
+    name: "tiktok",
     alias: ["tt", "ttdl"],
     category: "download",
     desc: "Download TikTok videos"
 },
 async ({ client, m, args }) => {
+
     try {
 
-        const url = args.join(" ").trim();
+        const url = String(args || "").trim();
 
         if (!url) {
             return m.reply(
 `📌 *TikTok Downloader*
 
 Usage:
-.tiktok <tiktok_url>
+.tiktok <tiktok url>
 
 Example:
-.tiktok https://vt.tiktok.com/xxxxxx/`
+.tiktok https://vt.tiktok.com/xxxxx/`
             );
         }
 
         await client.sendMessage(m.jid, {
-            react: { text: "📥", key: m.key }
+            react: {
+                text: "📥",
+                key: m.key
+            }
         });
 
-        const { data } = await axios.get(
-            `https://apis.xwolf.space/api/download/tiktok`,
+        const response = await axios.post(
+            "https://www.tikwm.com/api/",
             {
-                params: {
-                    url,
-                    key: "wxa_f_684dc23487"
-                },
-                timeout: 30000
+                url,
+                hd: 1
+            },
+            {
+                headers: {
+                    "Content-Type": "application/json"
+                }
             }
         );
 
-        console.log("TikTok API:", JSON.stringify(data, null, 2));
+        const data = response.data;
 
-        const result = data.result || data.data || {};
+        if (!data || !data.data || !data.data.play) {
+            await client.sendMessage(m.jid, {
+                react: {
+                    text: "❌",
+                    key: m.key
+                }
+            });
 
-        const videoUrl =
-            result.video_hd ||
-            result.video ||
-            result.play ||
-            result.download ||
-            result.download_url ||
-            result.nowm;
-
-        if (!videoUrl) {
-            return m.reply("❌ Video URL not found from API.");
+            return m.reply("❌ Failed to fetch TikTok video.");
         }
 
-        const caption = `🎬 *TikTok Downloader*
-
-📝 Title: ${result.title || "No title"}
-
-👤 Author: ${
-            typeof result.author === "object"
-                ? result.author.nickname
-                : result.author || "Unknown"
-        }
-
-❤️ Likes: ${result.likes || result.digg_count || "0"}
-👁 Views: ${result.views || result.play_count || "0"}
-
-✅ Download Complete`;
+        const video = data.data.play;
+        const title = data.data.title || "TikTok Video";
+        const author = data.data.author?.nickname || "Unknown";
+        const likes = data.data.digg_count || 0;
+        const views = data.data.play_count || 0;
 
         await client.sendMessage(
             m.jid,
             {
-                video: {
-                    url: videoUrl
-                },
-                caption
+                video: { url: video },
+                caption:
+`🎬 *TikTok Downloader*
+
+📝 Title: ${title}
+
+👤 Author: ${author}
+
+❤️ Likes: ${likes}
+👁 Views: ${views}
+
+✅ Downloaded Successfully`
             },
             { quoted: m }
         );
 
         await client.sendMessage(m.jid, {
-            react: { text: "✅", key: m.key }
+            react: {
+                text: "✅",
+                key: m.key
+            }
         });
 
-    } catch (err) {
+    } catch (error) {
 
-        console.error("TikTok Error:", err.response?.data || err.message);
+        console.error("TikTok Download Error:", error);
 
         await client.sendMessage(m.jid, {
-            react: { text: "❌", key: m.key }
+            react: {
+                text: "❌",
+                key: m.key
+            }
         });
 
-        return m.reply(
-            `❌ Download Failed\n\n${err.message}`
+        m.reply(
+`❌ Download Failed
+
+${error.message}`
         );
     }
 });
