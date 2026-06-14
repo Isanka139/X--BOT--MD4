@@ -30,35 +30,48 @@ Sparky({
   • _.tiktok https://vm.tiktok.com/xxxxxx/_
 
 ──────────────
-❖Ƭʜᴇ𝐗-𝐊𝐀𝐃𝐈𝐘𝐀-𝐌𝐃 💎`;
+❖Ƭʜᴇ𝐗-𝐊𝐀𝐃𝐈𝐘A-𝐌𝐃 💎`;
             return await m.reply(helpMessage);
         }
 
+        // 1. ඩවුන්ලෝඩ් වෙන්න පටන් ගන්නා විට 📥 React එක දැමීම
         await client.sendMessage(m.jid, { react: { text: "📥", key: m.key } });
 
-        const apiUrl = `https://free.churchless.to/v1/tiktok/video?url=${encodeURIComponent(url)}&api_key=Wxa_f_684dc23487`;
+        // ඔයා ලබාදුන් නව API Endpoint එක
+        const apiUrl = `https://apis.xwolf.space/api/download/tiktok?url=${encodeURIComponent(url)}&key=wxa_f_684dc23487`;
         
         const response = await axios.get(apiUrl);
-        const data = response.data;
+        const resData = response.data;
 
-        if (!data || !data.video_url) {
+        // API එකෙන් එන දත්ත වල 'result' හෝ 'data' කොටස වෙන් කර ගැනීම
+        const videoData = resData.result || resData.data || resData;
+
+        // වීඩියෝ ලින්ක් එක තිබේදැයි පරික්ෂා කිරීම (xwolf API එකේ සාමාන්‍යයෙන් play/hd_play හෝ video ලෙස එයි)
+        const videoUrl = videoData.play || videoData.video || videoData.download_url || videoData.video_url;
+
+        if (!videoUrl) {
             await client.sendMessage(m.jid, { react: { text: "❌", key: m.key } });
             return await m.reply("❌ *වීඩියෝව සෙවීමේදී දෝෂයක් සිදු විය. ලින්ක් එක නිවැරදිදැයි පරීක්ෂා කරන්න.*");
         }
 
+        // 2. වීඩියෝව ලැබුණු පසු 🔄 React එක දැමීම
         await client.sendMessage(m.jid, { react: { text: "🔄", key: m.key } });
 
-        // API එකෙන් දත්ත ලැබෙන විදිහ අනුව සාමාන්‍යයෙන් ලයික්/වීව්ස් format කර ගැනීම
-        const likes = data.likes || data.digg_count || data.statistics?.digg_count || "0";
-        const views = data.views || data.play_count || data.statistics?.play_count || "0";
-        const uploadDate = data.upload_date || data.create_time || "Unknown";
+        // Statistics දත්ත ලබා ගැනීම
+        const title = videoData.title || videoData.description || "TikTok Video";
+        const author = videoData.author?.nickname || videoData.author || "Unknown";
+        
+        // Likes, Views සහ Date (නැතිනම් 0 හෝ Unknown ලෙස පෙන්වයි)
+        const likes = videoData.digg_count || videoData.likes || videoData.statistics?.digg_count || "0";
+        const views = videoData.play_count || videoData.views || videoData.statistics?.play_count || "0";
+        const uploadDate = videoData.create_time || videoData.upload_date || "Unknown";
 
         const captionMessage = `╭─────────────────────────╮
   🎬  *TIKTOK DOWNLOADER*
 ╰─────────────────────────╯
 
-  📝 *Title :* └── _${data.title || "TikTok Video"}_
-  👤 *Author :* └── _${data.author || "Unknown"}_
+  📝 *Title :* └── _${title}_
+  👤 *Author :* └── _${author}_
 
 ──────────────
 📊 *STATISTICS / විස්තර:*
@@ -70,11 +83,13 @@ Sparky({
 ──────────────
 ❖Ƭʜᴇ𝐗-𝐊𝐀𝐃𝐈𝐘𝐀-𝐌𝐃 💎`;
 
+        // 3. වීඩියෝව සහ කැප්ෂන් එක යැවීම
         await client.sendMessage(m.jid, { 
-            video: { url: data.video_url }, 
+            video: { url: videoUrl }, 
             caption: captionMessage 
         }, { quoted: m });
 
+        // 4. සාර්ථකව යවා අවසන් වූ පසු ✅ React එක දැමීම
         await client.sendMessage(m.jid, { react: { text: "✅", key: m.key } });
 
     } catch (err) {
