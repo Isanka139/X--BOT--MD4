@@ -3,8 +3,8 @@ const { Sparky } = require("../lib");
 // Runtime එකේදී වචන තබා ගන්නා තාවකාලික Map එක (බොට් Restart වුවහොත් මැකී යයි)
 global.customAutoReplies = global.customAutoReplies || {
     'hi': 'හලෝ මචං! කොහොමද?',
-    'bot': 'ඔව් මචං, මම ඔන්ලයින් ඉන්නේ! කියන්න මොකක්ද වෙන්න ඕනේ?'
-    'boot': 'boot status video ටිකක් මම තව ටිකකින් හොයලා දෙන්නම් ම්ම දැන් වැඩක කමක් නැද්ද',
+    'bot': 'ඔව් මචං, මම ඔන්ලයින් ඉන්නේ! කියන්න මොකක්ද වෙන්න ඕනේ?',
+    'boot': 'boot status video ටිකක් මම තව ටිකකින් හොයලා දෙන්නම් ම්ම දැන් වැඩක කමක් නැද්ද?',
 };
 
 // 1. 🤖 සාමාන්‍ය TEXT මැසේජ් කියවා රිප්ලයි කරන පද්ධතිය
@@ -23,7 +23,7 @@ Sparky({
             await client.sendMessage(m.jid, { react: { text: "✨", key: m.key } });
 
             const replyMessage = `╭─────────────────────────╮
-  ✨  *AUTOMATED REPLY*
+  ✨  `𝙺𝙰𝙳𝙸𝚈𝙰 𝙼𝙳 𝙱𝙾𝚃`
 ╰─────────────────────────╯
 
 ${replyText}
