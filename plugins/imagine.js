@@ -1,6 +1,4 @@
 const axios = require("axios");
-
-// 🛠️ FIXED: Sparky සහ isPublic දෙකම ප්‍රධාන ලිබ්රරි එකෙන් මෙන්න මේ විදිහට require කරන්න ඕනේ
 const { Sparky, isPublic } = require("../lib"); 
 
 // ======================================================
@@ -16,7 +14,6 @@ Sparky({
     try {
         const input = (text || m.text || m.body || "").trim();
 
-        // .imagine command එකක් තිබේ නම් එය ඉවත් කිරීම
         let cleanInput = input;
         if (cleanInput.startsWith(".")) {
             cleanInput = cleanInput.replace(/^\.\w+\s+/, "");
@@ -31,7 +28,7 @@ Sparky({
         // =========================
         // 🎯 STYLE DETECTION
         // =========================
-        let style = "oil-painting"; // default style
+        let style = "oil-painting"; 
         let promptText = cleanInput;
 
         const styleMap = {
@@ -55,9 +52,8 @@ Sparky({
 
         await m.reply(`🎨 *Generating ${style} image... කරුණාකර මොහොතක් රැඳී සිටින්න.*`);
 
-        const apiKey = "wxa_f_21e17ba43b"; // ඔයාගේ API Key එක
+        const apiKey = "wxa_f_21e17ba43b"; 
 
-        // ratio එක 1%3A1 ලෙස URL encode කර ඇත
         const apiUrl = `https://apis.xwolf.space/api/ai/tools/style-transfer?prompt=${encodeURIComponent(promptText)}&style=${encodeURIComponent(style)}&ratio=1%3A1&key=${apiKey}`;
 
         console.log("📡 API URL:", apiUrl);
@@ -67,15 +63,11 @@ Sparky({
 
         console.log("📦 API RESPONSE:", data);
 
-        // =========================
-        // 🧠 SMART RESULT HANDLING
-        // =========================
-        let imageUrl = null;
-        if (data && data.status === true && data.result) {
-            imageUrl = data.result;
-        } else if (data && data.result) {
-            imageUrl = data.result;
-        }
+        // ======================================================
+        // 🧠 SMART RESULT HANDLING (FIXED FOR XWOLF NEW RESPONSE)
+        // ======================================================
+        // 🛠️ මෙතනට data?.url කියන කොටස දාලා නිවැරදි කලා
+        let imageUrl = data?.url || data?.result || data?.image || null;
 
         if (!imageUrl) {
             return m.reply(
@@ -89,7 +81,6 @@ Sparky({
             `🎭 *Style:* ${style}\n` +
             `📝 *Prompt:* ${promptText}`;
 
-        // Sparky Framework එකේ image යවන නිවැරදිම විදිහ
         return await m.send(imageUrl, { caption }, "image", m);
 
     } catch (err) {
