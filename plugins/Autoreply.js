@@ -5,22 +5,27 @@ const path = require("path");
 // 📂 JSON file path
 const DATA_FILE = path.join(__dirname, "../database/autoreplies.json");
 
-// 🧠 Load data from file
+// 🧠 Memory store
 let autoReplies = [];
 
+// -------------------------
+// LOAD DATA
+// -------------------------
 function loadData() {
     try {
         if (!fs.existsSync(DATA_FILE)) {
             fs.writeFileSync(DATA_FILE, JSON.stringify([]));
         }
-        autoReplies = JSON.parse(fs.readFileSync(DATA_FILE));
+        autoReplies = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
     } catch (err) {
         console.error("Load error:", err);
         autoReplies = [];
     }
 }
 
-// 💾 Save data to file
+// -------------------------
+// SAVE DATA
+// -------------------------
 function saveData() {
     try {
         fs.writeFileSync(DATA_FILE, JSON.stringify(autoReplies, null, 2));
@@ -33,7 +38,9 @@ function saveData() {
 loadData();
 
 
-// --- ADD REPLY ---
+// ======================================================
+// ➕ ADD AUTO REPLY
+// ======================================================
 Sparky({
     name: "addreply",
     alias: ["ar"],
@@ -42,29 +49,38 @@ Sparky({
     desc: "Add auto reply keyword"
 }, async ({ m, text }) => {
     try {
-        const data = text.split(" ").slice(1).join(" ");
+
+        if (!text) {
+            return m.reply("❌ Usage:\n.addreply keyword|message");
+        }
+
+        // remove command safely
+        const data = text.replace(/^\.?\w+\s+/i, "").trim();
 
         if (!data.includes("|")) {
             return m.reply("❌ Format:\n.addreply keyword|message");
         }
 
-        const [keyword, reply] = data.split("|").map(v => v.trim());
+        const parts = data.split("|");
 
-        if (!keyword || !reply) {
+        if (parts.length < 2) {
             return m.reply("❌ Invalid format!");
         }
 
-        // check duplicate
-        const exists = autoReplies.find(r => r.keyword === keyword.toLowerCase());
+        const keyword = parts[0].trim().toLowerCase();
+        const reply = parts.slice(1).join("|").trim(); // allow | inside message
+
+        if (!keyword || !reply) {
+            return m.reply("❌ Keyword or reply missing!");
+        }
+
+        // duplicate check
+        const exists = autoReplies.find(r => r.keyword === keyword);
         if (exists) {
             return m.reply("⚠️ This keyword already exists!");
         }
 
-        autoReplies.push({
-            keyword: keyword.toLowerCase(),
-            reply
-        });
-
+        autoReplies.push({ keyword, reply });
         saveData();
 
         return m.reply(
@@ -72,13 +88,15 @@ Sparky({
         );
 
     } catch (err) {
-        console.error(err);
+        console.error("AddReply Error:", err);
         m.reply("❌ Error adding reply");
     }
 });
 
 
-// --- DELETE REPLY ---
+// ======================================================
+// 🗑️ DELETE AUTO REPLY
+// ======================================================
 Sparky({
     name: "delreply",
     alias: ["dr"],
@@ -87,7 +105,8 @@ Sparky({
     desc: "Delete auto reply keyword"
 }, async ({ m, text }) => {
     try {
-        const key = text.split(" ").slice(1).join(" ").toLowerCase();
+
+        const key = text.replace(/^\.?\w+\s+/i, "").trim().toLowerCase();
 
         if (!key) {
             return m.reply("❌ Usage:\n.delreply keyword");
@@ -106,26 +125,60 @@ Sparky({
         return m.reply(`🗑️ Deleted permanently: ${key}`);
 
     } catch (err) {
-        console.error(err);
+        console.error("DelReply Error:", err);
         m.reply("❌ Error deleting reply");
     }
 });
 
 
-// --- AUTO REPLY LISTENER ---
+// ======================================================
+// 📜 LIST AUTO REPLIES
+// ======================================================
+Sparky({
+    name: "listreply",
+    alias: ["lr"],
+    category: "tools",
+    fromMe: isPublic,
+    desc: "Show all auto replies"
+}, async ({ m }) => {
+    try {
+
+        if (!autoReplies.length) {
+            return m.reply("📭 No auto replies found!");
+        }
+
+        let msg = "📌 *AUTO REPLIES LIST*\n\n";
+
+        autoReplies.forEach((r, i) => {
+            msg += `${i + 1}. 🔑 ${r.keyword}\n💬 ${r.reply}\n\n`;
+        });
+
+        return m.reply(msg);
+
+    } catch (err) {
+        console.error(err);
+        m.reply("❌ Error fetching list");
+    }
+});
+
+
+// ======================================================
+// 🤖 AUTO REPLY LISTENER
+// ======================================================
 Sparky({
     on: "text",
     fromMe: isPublic
 }, async ({ m, text }) => {
     try {
+
         if (!text) return;
 
         const msg = text.toLowerCase();
 
-        for (const rule of autoReplies) {
-            if (msg.includes(rule.keyword)) {
-                return await m.reply(rule.reply);
-            }
+        const rule = autoReplies.find(r => msg.includes(r.keyword));
+
+        if (rule) {
+            return await m.reply(rule.reply);
         }
 
     } catch (err) {
