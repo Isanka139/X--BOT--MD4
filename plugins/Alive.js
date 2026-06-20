@@ -136,6 +136,10 @@ Sparky({
 1️⃣ .menu
 2️⃣ .sun
 3️⃣ .ping
+
+• *දැනටමත් අපගේ X KADIYA MD වට්සැප් බොට් ඔබගේ whatsapp ගිනුම සදහා සම්බන්ධ වී අවසන්.*
+• *ඔබට ලගදීම අපගේ whatsapp bot opition බාවිතා කිරීමට පුලුවන්.*
+
 `;
 
         await client.sendMessage(m.jid, {
