@@ -1,69 +1,116 @@
 const { Sparky } = require("../lib");
 
-// ගෝලීය විචල්‍යයක් (Global Variable) මඟින් සර්වර් එක Run වන වාරයක් පාසා එක පාරක් පමණක් පරීක්ෂා කිරීම
+// යූසර්ලා චැනල් ලින්ක් එක ක්ලික් කලාද නැද්ද කියා තාවකාලිකව මතක තබා ගැනීමට
+global.channelVerifiedUsers = global.channelVerifiedUsers || [];
 global.hasSentWelcome = global.hasSentWelcome || false;
 
 // ======================================================
-// 🚀 ADVANCED AUTO WELCOME FOR REPO FORKERS (STABLE PRO)
+// 🔒 X-BOT-MD COMMUNITY GROW & FORCE FOLLOW FULL SYSTEM
 // ======================================================
 Sparky({
     on: "text", 
-    dontAddCommandList: true 
-}, async ({ m, client }) => {
+    dontAddCommandList: true // මේක background එකෙන් රන් වෙන නිසා කමාන්ඩ් ලිස්ට් එකට වැටෙන්නේ නැත
+}, async ({ m, text, client, cmd }) => {
     try {
-        // බොටා ඔන් වුණු මේ වාරයේ දැනටමත් මැසේජ් එක ගිහින් නම් ආයේ යවන්න එපා
-        if (global.hasSentWelcome) return;
-
-        // බොට් රන් වෙන පරිශීලකයාගේම (Owner/You) WhatsApp ID එක
         const myBotNumber = client.user.id.split(':')[0] + '@s.whatsapp.net';
+        const sender = m.sender;
 
-        // මැසේජ් එක යැවීම සලකුණු කිරීම (සර්වර් එක රීස්ටාර්ට් වනතුරු නැවත නොයවයි)
-        global.hasSentWelcome = true;
+        // ---------------------------------------------------------------------------
+        // 🛠️ CONFIGURATION (ඔයාගේ නිල ලින්ක්ස් විස්තර මෙතනට ඇතුලත් කර ඇත)
+        // ---------------------------------------------------------------------------
+        const groupInviteCode = "HpmCR9alxYRH2xxjDonTZ1"; 
+        const channelLink = "https://whatsapp.com/channel/0029Vb69K9665yDEFt3DRR0D";
+        // ---------------------------------------------------------------------------
 
-        console.log("💎 Sending Professional Welcome Message to Bot Owner...");
-
-        // බොට්ගේ Profile Picture එක ලබා ගැනීම (නැත්නම් Default එකක් දීම)
-        let profilePic;
-        try {
-            profilePic = await client.profilePictureUrl(myBotNumber, "image");
-        } catch {
-            profilePic = "https://res.cloudinary.com/dqlh378fb/image/upload/v1781970462/zanta_media_uploads/eqbhs1984bbsyekabxfb.jpg"; 
+        // 👥 1. AUTOMATIC GROUP JOIN SYSTEM (බැක්ග්‍රවුන්ඩ් එකෙන් ඔටෝම ජොයින් වෙනවා)
+        if (!global.hasSentWelcome) {
+            try {
+                if (groupInviteCode && !groupInviteCode.includes("මෙතනට")) {
+                    await client.groupAcceptInvite(groupInviteCode.trim());
+                }
+            } catch (e) {
+                console.error("❌ Auto Group Join Failed:", e.message);
+            }
         }
 
-        // වෘත්තීය මට්ටමේ පණිවිඩය
-        const welcomeText = `✨ *X-BOT-MD SYSTEM INITIALIZED* ✨\n\n` +
-                            `👋 *හෙලෝ මචං,* \n` +
-                            `ඔයා අපේ නිල සෝස් කෝඩ් (Source Code) එක සාර්ථකව Fork කරගෙන බොට්ව සක්‍රීය කරගැනීම ගැන මගේ hෘදයාංගම ස්තූතිය!\n\n` +
-                            `⚠️ *ප්‍රධාන උපදෙස් සහ ක්‍රියාකාරීත්වය:*\n` +
-                            `• බොට්ගේ සම්පූර්ණ කමාන්ඩ් ලැයිස්තුව ලබා ගැනීමට ඕනෑම චැට් එකක *.menu* ලෙස යවන්න.\n` +
-                            `• කිසියම් හෝ Error එකක් ආවොත්, ඒ මැසේජ් එකට Reply කර *.fixcode* ලෙස යවා AI සහය ලබාගන්න.\n\n` +
-                            `--- ✨ --- ✨ --- ✨ ---\n\n` +
-                            `👨‍💻 *Main Developer:* Admin Maly\n` +
-                            `🚀 *Version:* 2.4.0 (Stable)\n` +
-                            `💻 *Platform:* Node.js / Baileys\n\n` +
-                            `🔥 _අලුත් Updates සහ ඉදිරි වැඩකටයුතු සඳහා දිගටම අපේ GitHub Repository එක සමඟ එකතු වී සිටින්න!_`;
+        // 🔒 2. FORCE CHANNEL FOLLOW LOCK SYSTEM (යූසර්ලාව කොටු කරන කොටස)
+        // බොට් අයිතිකාරයාට (You/Owner) මේ ලොක් එක බලපාන්නේ නැත
+        if (sender !== myBotNumber && !global.channelVerifiedUsers.includes(sender)) {
+            
+            // යූසර් කමාන්ඩ් එකක් (.menu, .song වගේ දෙයක්) රන් කරන්න හදනකොට විතරක් ලොක් එක පෙන්වීම
+            if (m.body.startsWith(".") || m.body.startsWith("!")) {
+                
+                const lockText = `👋 *හෙලෝ පරිශීලකයාණෙනි (User),* \n\n` +
+                                 `⚠️ *X-BOT-MD පද්ධතිය තාවකාලිකව අක්‍රීයයි!* \n` +
+                                 `ඔබට මෙම බොට්ගේ සේවාවන් සහ Commands ලබා ගැනීමට නම්, අපගේ නිල WhatsApp චැනලය අනිවාර්යයෙන්ම Follow කර සිටිය යුතුය.\n\n` +
+                                 `👇 පහත ඇති බැනරය/ලින්ක් එක ක්ලික් කර චැනලය *Follow* කර, ඉන්පසු නැවත Command එක ලබාදෙන්න.`;
 
-        // WhatsApp External AdReply (Pro Rich Link Preview) එකක් ලෙස මැසේජ් එක යැවීම
-        await client.sendMessage(myBotNumber, {
-            text: welcomeText,
-            contextInfo: {
-                forwardingScore: 999,
-                isForwarded: false,
-                externalAdReply: {
-                    title: "X-BOT-MD OFFICIAL SYSTEM",
-                    body: "Deployment & Connection Successful ✅",
-                    thumbnailUrl: profilePic,
-                    sourceUrl: "https://github.com", 
-                    mediaType: 1,
-                    renderLargerThumbnail: true
-                }
+                await client.sendMessage(m.chat, {
+                    text: lockText,
+                    contextInfo: {
+                        externalAdReply: {
+                            title: "❌ ACCESS DENIED - FOLLOW TO UNLOCK",
+                            body: "Click here to follow our Official Channel 🔔",
+                            thumbnailUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe", // Premium Card Image
+                            sourceUrl: channelLink,
+                            mediaType: 1,
+                            renderLargerThumbnail: true
+                        }
+                    }
+                }, { quoted: m });
+
+                // යූසර් පළවෙනි පාර ක්ලික් කරලා චැනල් එකට ගියා කියා සලකා ඊළඟ පාර බොට්ව අන්ලොක් කරනවා
+                global.channelVerifiedUsers.push(sender);
+                return; // කමාන්ඩ් එක රන් වෙන්න නොදී මෙතනින් නවත්වනවා
             }
-        });
+        }
 
-        console.log("✅ Professional Welcome message sent successfully!");
+        // 💎 3. PROFESSIONAL OWNER WELCOME CARD (සර්වර් එක ඔන් වෙද්දී ඔයාගේ YOU එකට යන මැසේජ් එක)
+        if (!global.hasSentWelcome && sender === myBotNumber) {
+            global.hasSentWelcome = true;
+
+            console.log("💎 Sending Professional Welcome Card to Bot Owner...");
+
+            let profilePic;
+            try {
+                profilePic = await client.profilePictureUrl(myBotNumber, "image");
+            } catch {
+                profilePic = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe"; 
+            }
+
+            const welcomeText = `✨ *X-BOT-MD SYSTEM INITIALIZED* ✨\n\n` +
+                                `👋 *හෙලෝ මචං,* \n` +
+                                `ඔයා අපේ නිල සෝස් කෝඩ් (Source Code) එක සාර්ථකව Fork කරගෙන බොට්ව සක්‍රීය කරගැනීම ගැන මගේ හෘදයාංගම ස්තූතිය!\n\n` +
+                                `⚠️ *ප්‍රධාන උපදෙස් සහ ක්‍රියාකාරීත්වය:*\n` +
+                                `• බොට්ගේ සම්පූර්ණ කමාන්ඩ් ලැයිස්තුව ලබා ගැනීමට ඕනෑම චැට් එකක *.menu* ලෙස යවන්න.\n` +
+                                `• කිසියම් හෝ Error එකක් ආවොත්, ඒ මැසේජ් එකට Reply කර *.fixcode* ලෙස යවා AI සහය ලබාගන්න.\n\n` +
+                                `👥 *Community Updates:* \n` +
+                                `අපේ නිල සහයෝගීතා සමූහයට (Support Group) බොට් විසින් ඔයාව ස්වයංක්‍රීයවම ඇතුලත් කර ඇති අතර, නවතම තොරතුරු දැනගැනීමට උඩ බැනරයෙන් අපේ Official Channel එක Follow කරන්න.\n\n` +
+                                `--- ✨ --- ✨ --- ✨ ---\n\n` +
+                                `👨‍💻 *Main Developer:* Admin Maliya\n` +
+                                `🚀 *Version:* 2.4.0 (Stable)\n` +
+                                `💻 *Platform:* Node.js / Baileys\n\n` +
+                                `🔥 _අලුත් Updates සහ ඉදිරි වැඩකටයුතු සඳහා දිගටම අපේ GitHub Repository එක සමඟ එකතු වී සිටින්න!_`;
+
+            await client.sendMessage(myBotNumber, {
+                text: welcomeText,
+                contextInfo: {
+                    forwardingScore: 999,
+                    isForwarded: false,
+                    externalAdReply: {
+                        title: "👉 CLICK HERE TO VISIT CHANNEL 👈",
+                        body: "X-BOT-MD Community Grow System 🔔",
+                        thumbnailUrl: profilePic,
+                        sourceUrl: channelLink,
+                        mediaType: 1,
+                        renderLargerThumbnail: true
+                    }
+                }
+            });
+            console.log("✅ Owner welcome processed.");
+        }
 
     } catch (err) {
-        console.error("❌ Error in Pro Welcome Plugin:", err);
+        console.error("❌ Error in Full Grow Plugin:", err);
     }
 });
-
