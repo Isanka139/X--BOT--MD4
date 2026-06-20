@@ -1,5 +1,7 @@
 const axios = require("axios");
-const { isPublic } = require("../lib"); // 👈 isPublic require කරලා නැත්නම් මේක අනිවාර්යයෙන්ම ඕනේ
+
+// 🛠️ FIXED: Sparky සහ isPublic දෙකම ප්‍රධාන ලිබ්රරි එකෙන් මෙන්න මේ විදිහට require කරන්න ඕනේ
+const { Sparky, isPublic } = require("../lib"); 
 
 // ======================================================
 // 🎨 AI IMAGE GENERATOR (MULTI STYLE) - FIXED VERSION
@@ -14,7 +16,7 @@ Sparky({
     try {
         const input = (text || m.text || m.body || "").trim();
 
-        // .imagine command එක අයින් කිරීම (අවශ්‍ය නම්)
+        // .imagine command එකක් තිබේ නම් එය ඉවත් කිරීම
         let cleanInput = input;
         if (cleanInput.startsWith(".")) {
             cleanInput = cleanInput.replace(/^\.\w+\s+/, "");
@@ -55,12 +57,12 @@ Sparky({
 
         const apiKey = "wxa_f_21e17ba43b"; // ඔයාගේ API Key එක
 
-        // 🛠️ FIXED: ratio එක 1%3A1 ලෙස URL encode කර ඇත
+        // ratio එක 1%3A1 ලෙස URL encode කර ඇත
         const apiUrl = `https://apis.xwolf.space/api/ai/tools/style-transfer?prompt=${encodeURIComponent(promptText)}&style=${encodeURIComponent(style)}&ratio=1%3A1&key=${apiKey}`;
 
         console.log("📡 API URL:", apiUrl);
 
-        const response = await axios.get(apiUrl, { timeout: 45000 }); // Image generation වලට සරලව වැඩි වෙලාවක් යන නිසා timeout එක 45s කලා
+        const response = await axios.get(apiUrl, { timeout: 45000 }); 
         const data = response?.data;
 
         console.log("📦 API RESPONSE:", data);
