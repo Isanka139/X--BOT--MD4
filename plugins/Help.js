@@ -1,14 +1,32 @@
 const { Sparky, isPublic } = require("../lib");
 
-// 🔐 SAFE JID HANDLER (IMPORTANT FIX)
+// 🔐 SAFE JID HANDLER
 const getJid = (m) => {
     return m?.chat || m?.from || m?.key?.remoteJid || null;
 };
 
-// --- 1. HELP / MENU COMMAND ---
+// 🚀 BUTTON BUILDER (ANY BUTTON SUPPORT)
+const buildButtonsMessage = (text, footer, buttons = []) => {
+    return {
+        text,
+        footer,
+        buttons: buttons.map(btn => ({
+            buttonId: btn.id,
+            buttonText: { displayText: btn.text },
+            type: 1
+        })),
+        headerType: 1
+    };
+};
+
+
+
+// ─────────────────────────────
+// 📜 HELP / MENU COMMAND
+// ─────────────────────────────
 Sparky({
     name: "help",
-    alias: ["me"],
+    alias: ["menu"],
     category: "main",
     fromMe: isPublic,
     desc: "Show bot help menu with buttons"
@@ -18,37 +36,31 @@ Sparky({
         const targetChat = getJid(m);
         if (!targetChat) return m.reply("❌ Invalid chat ID");
 
-        const helpText = `╭━━━〔 ❖Ƭʜᴇ 𝐗-𝐊𝐀𝐃𝐈𝐘𝐀-𝐌𝐃 💎 〕━━━⬣
+        const helpText = `╭━━━〔 ❖ X-KADIYA-MD 💎 〕━━━⬣
+┃ 👋 Welcome Bot Menu
 ┃
-┃ 👋 Welcome to X-KADIYA-MD Bot
-┃
-┃ 🚀 Our Services
+┃ 🚀 Features
 ┃ ─────────────
-┃ 🌐 Image To URL
-┃ 📥 Media Downloader
-┃ 🎵 Song Search
-┃ 🤖 AI Chat Assistant
-┃ 🛠️ Useful Tools
-┃
-┃ 💎 Why Choose Us?
-┃ ─────────────
-┃ ✅ Fast Response
-┃ ✅ High Quality Service
-┃ ✅ Easy To Use
-┃ ✅ 24/7 Available
+┃ 🤖 AI Assistant
+┃ 🎵 Song Download
+┃ ⚡ Speed Test
+┃ ☀️ Sun Tool
 ┃
 ╰━━━━━━━━━━━━━━⬣`;
 
-        const buttonMessage = {
-            text: helpText,
-            footer: "💎 X-KADIYA-MD 💎",
-            buttons: [
-                { buttonId: '.ai', buttonText: { displayText: '🤖 AI Assistant' }, type: 1 },
-                { buttonId: '.song', buttonText: { displayText: '🎵 Search Song' }, type: 1 },
-                { buttonId: '.ping', buttonText: { displayText: '⚡ Check Speed' }, type: 1 }
-            ],
-            headerType: 1
-        };
+        // 🔘 ANY BUTTONS (EDIT HERE ONLY)
+        const buttons = [
+            { id: '.menu', text: '📜 Menu' },
+            { id: '.sun', text: '☀️ Sun' },
+            { id: '.song', text: '🎵 Song' },
+            { id: '.w', text: '⚡ W' }
+        ];
+
+        const buttonMessage = buildButtonsMessage(
+            helpText,
+            "💎 X-KADIYA-MD 💎",
+            buttons
+        );
 
         await client.sendMessage(targetChat, buttonMessage, { quoted: m });
 
@@ -59,7 +71,10 @@ Sparky({
 });
 
 
-// --- 2. PING COMMAND ---
+
+// ─────────────────────────────
+// ⚡ PING COMMAND
+// ─────────────────────────────
 Sparky({
     name: "ping",
     category: "main",
@@ -72,25 +87,25 @@ Sparky({
         if (!targetChat) return m.reply("❌ Invalid chat ID");
 
         const start = Date.now();
-
-        const msg = await m.reply("Testing Speed... ⏳");
-
-        const end = Date.now();
-        const responseTime = end - start;
+        await m.reply("Testing Speed... ⏳");
+        const responseTime = Date.now() - start;
 
         const pingText = `⚡ *Pong!*\n\nResponse Speed: *${responseTime}ms*`;
 
-        const pingButtons = {
-            text: pingText,
-            footer: "💎 X-KADIYA-MD 💎",
-            buttons: [
-                { buttonId: '.menu', buttonText: { displayText: '📜 Main Menu' }, type: 1 },
-                { buttonId: '.owner', buttonText: { displayText: '📞 Contact Owner' }, type: 1 }
-            ],
-            headerType: 1
-        };
+        // 🔘 PING BUTTONS
+        const buttons = [
+            { id: '.menu', text: '📜 Main Menu' },
+            { id: '.song', text: '🎵 Song' },
+            { id: '.w', text: '⚡ W' }
+        ];
 
-        await client.sendMessage(targetChat, pingButtons, { quoted: m });
+        const buttonMessage = buildButtonsMessage(
+            pingText,
+            "💎 X-KADIYA-MD 💎",
+            buttons
+        );
+
+        await client.sendMessage(targetChat, buttonMessage, { quoted: m });
 
     } catch (err) {
         console.error(err);
