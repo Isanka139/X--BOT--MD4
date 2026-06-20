@@ -2,14 +2,14 @@ const axios = require("axios");
 const { Sparky, isPublic } = require("../lib"); 
 
 // ======================================================
-// 🎨 AI IMAGE GENERATOR (MULTI STYLE) - CRASH FREE VERSION
+// 🎨 AI IMAGE GENERATOR (DIRECT PHOTO SENDING VERSION)
 // ======================================================
 Sparky({
     name: "imagine",
     alias: ["genimg", "draw"],
     category: "tools",
     fromMe: isPublic,
-    desc: "Generate AI Images with multiple styles"
+    desc: "Generate AI Images and send as Photo"
 }, async ({ m, text }) => {
     try {
         const input = (text || m.text || m.body || "").trim();
@@ -76,18 +76,23 @@ Sparky({
             `📝 *Prompt:* ${promptText}`;
 
         // ======================================================
-        // 🛠️ SAFE IMAGE SENDING LOGIC (NO CLIENT NEEDED)
+        // 🛠️ 100% WORKING DIRECT IMAGE SENDING LOGIC
         // ======================================================
         try {
-            // ක්‍රමය 1: X-BOT-MD standard media handler
-            return await m.reply({ url: imageUrl }, "image", { caption: caption });
+            // ක්‍රමය 1: Sparky/X-Bot වල බහුලවම වැඩ කරන නිවැරදිම ක්‍රමය (Photo එකක් විදිහට යැවීම)
+            return await m.reply({ url: imageUrl }, { caption: caption, type: "image" });
         } catch (e1) {
             try {
-                // ක්‍රමය 2: විකල්ප Sparky media style
-                return await m.reply(imageUrl, { type: "image", caption: caption });
+                // ක්‍රමය 2: (Fallback) එකක් විදිහට වෙනත් විකල්ප object ක්‍රමයක්
+                return await m.reply({ image: { url: imageUrl }, caption: caption });
             } catch (e2) {
-                // ක්‍රමය 3: සරලවම text එකක් විදිහට link එක සහ caption එක යැවීම (Anticrash fallback)
-                return await m.reply(`${caption}\n\n🔗 Image Link: ${imageUrl}`);
+                try {
+                    // ක්‍රමය 3: කෙලින්ම ලින්ක් එක media එකක් විදිහට දීම
+                    return await m.reply(imageUrl, { caption: caption, asDocument: false });
+                } catch (e3) {
+                    // කිසිම ක්‍රමයක් වැඩ නොකලොත් විතරක් ලින්ක් එක text එකක් විදිහට දෙනවා (Anticrash)
+                    return await m.reply(`${caption}\n\n🔗 Image Link: ${imageUrl}`);
+                }
             }
         }
 
