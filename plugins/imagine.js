@@ -74,7 +74,8 @@ Sparky({
             `✨ *AI Generated Image*\n\n` +
             `🎭 *Style:* ${style}\n` +
             `📝 *Prompt:* ${promptText}` +
-            `❤️‍🩹 ❖Ƭʜᴇ𝐗-𝐊𝐀𝐃𝐈𝐘𝐀-𝐌𝐃 💎\n\n`;
+            
+            `❤️‍🩹 *❖Ƭʜᴇ𝐗-𝐊𝐀𝐃𝐈𝐘𝐀-𝐌𝐃 💎*\n\n`;
 
         // ======================================================
         // 🛠️ X-BOT-MD OFFICIAL MEDIA SENDING FUNCTION
