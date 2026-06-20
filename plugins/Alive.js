@@ -135,6 +135,7 @@ Sparky({
 *Reply with:*
 1️⃣ Ping
 2️⃣ Menu
+3️⃣ *Kadiya Md Bot Connected*
 `;
 
         await client.sendMessage(m.jid, {
