@@ -2,7 +2,7 @@ const axios = require("axios");
 const { Sparky, isPublic } = require("../lib"); 
 
 // ======================================================
-// 🎨 AI IMAGE GENERATOR (MULTI STYLE) - FIXED VERSION
+// 🎨 AI IMAGE GENERATOR (MULTI STYLE) - 100% FIXED VERSION
 // ======================================================
 Sparky({
     name: "imagine",
@@ -61,12 +61,6 @@ Sparky({
         const response = await axios.get(apiUrl, { timeout: 45000 }); 
         const data = response?.data;
 
-        console.log("📦 API RESPONSE:", data);
-
-        // ======================================================
-        // 🧠 SMART RESULT HANDLING (FIXED FOR XWOLF NEW RESPONSE)
-        // ======================================================
-        // 🛠️ මෙතනට data?.url කියන කොටස දාලා නිවැරදි කලා
         let imageUrl = data?.url || data?.result || data?.image || null;
 
         if (!imageUrl) {
@@ -81,7 +75,20 @@ Sparky({
             `🎭 *Style:* ${style}\n` +
             `📝 *Prompt:* ${promptText}`;
 
-        return await m.send(imageUrl, { caption }, "image", m);
+        // ======================================================
+        // 🛠️ FIXED IMAGE SENDING LOGIC FOR X-BOT-MD
+        // ======================================================
+        try {
+            // ක්‍රමය 1: X-BOT-MD වල බහුලවම වැඩ කරන සරල ක්‍රමය
+            return await m.reply({ url: imageUrl }, "image", { caption: caption });
+        } catch (e) {
+            // ක්‍රමය 2: (Fallback) එකක් විදිහට standard Baileys sendMessage ක්‍රමය
+            const jid = m.chat || m.from;
+            return await m.client.sendMessage(jid, { 
+                image: { url: imageUrl }, 
+                caption: caption 
+            }, { quoted: m });
+        }
 
     } catch (err) {
         console.error("❌ ERROR:", err);
