@@ -1,126 +1,97 @@
-import { sms } from '../lib/index.js'; // X-BOT-MD හි ප්‍රධාන මැසේජ් පද්ධතිය
+import { cmd } from '../lib/plugins.js'; // ඔයාගේ බේස් එක අනුව මේ path එක වෙනස් විය හැක (උදා: '../lib/index.js')
 
-sms({
-    cmdname: "creact",
-    desc: "WhatsApp Channels සඳහා ආරක්ෂිතව ස්වයංක්‍රීය ප්‍රතිචාර දැක්වීම.",
+cmd({
+    pattern: "creact",
+    alias: ["creact", "chreact"],
+    desc: "WhatsApp Channels සඳහා ස්වයංක්‍රීය ප්‍රතිචාර දැක්වීම.",
     category: "utility",
     use: '.channelreact [සබැඳිය] , [ඉමෝජි] , [වාර ගණන] , [ප්‍රමාදය]',
     filename: __filename
 },
-async (conn, m, text) => {
-    
-    // 1. හිස් ආදාන (Empty Input) නිසා Crash වීම වැළැක්වීම
-    if (!text || text.trim() === "") {
-        return m.reply(`ℹ️ *Pro Channel React පද්ධතිය* ℹ️\n\n` +
-            `*භාවිතය:* .channelreact [Link] , [Emoji] , [Count] , [Delay]\n` +
-            `*උදාහරණ:* .channelreact https://whatsapp.com/channel/xxxx , 🔥 , 5 , 2\n\n` +
-            `• බහු-ඉමෝජි (Multi-Emoji): මාරුවෙන් මාරුවට වැටීමට ඉමෝජි කිහිපයක් ළඟ ළඟ යොදන්න (උදා: 🔥❤️👍).`);
-    }
-
-    // 2. ආරක්ෂිතව දත්ත වෙන් කර ගැනීම (Safe Splitting)
-    let parts = text.split(',').map(p => p ? p.trim() : '');
-    let channelLink = parts[0];
-    let emojiInput = parts[1] || '❤️';
-    let countInput = parts[2] || '1';
-    let delayInput = parts[3] || '1.5';
-
-    // 3. සබැඳිය (Link) වැරදි වීම නිසා සිදුවන දෝෂ වැළැක්වීම
-    if (!channelLink || !channelLink.includes('whatsapp.com/channel/')) {
-        return m.reply('❌ කරුණාකර වලංගු WhatsApp Channel සබැඳියක් (Link) ඇතුළත් කරන්න.');
-    }
-
-    // 4. අගයන් නිවැරදි සංඛ්‍යාවන් බවට පත් කිරීම (Safe Parsing)
-    let count = parseInt(countInput);
-    if (isNaN(count) || count <= 0) count = 1; // අකුරු ගැහුවොත් Crash නොවී 1 ලෙස ගනී
-    if (count > 30) count = 30; // WhatsApp සීමාවන් ඉක්මවා ගොස් Block වීම වැළැක්වීමට (Max 30)
-
-    let delaySec = parseFloat(delayInput);
-    if (isNaN(delaySec) || delaySec < 0.5) delaySec = 0.5; // අවම ප්‍රමාදය තත්පර 0.5 කි
-
+async (conn, m, text, { isCreator }) => {
     try {
-        m.reply('🔄 නාලිකා දත්ත සහ පණිවිඩ පරීක්ෂා කරමින් පවතිනවා. කරුණාකර රැඳී සිටින්න...');
+        // හිස් ආදාන පරීක්ෂාව
+        if (!text || text.trim() === "") {
+            return m.reply(`ℹ️ *Channel React පද්ධතිය* ℹ️\n\n` +
+                `*භාවිතය:* .channelreact [Link] , [Emoji] , [Count] , [Delay]\n` +
+                `*උදාහරණ:* .channelreact https://whatsapp.com/channel/xxxx , 🔥 , 5 , 1.5`);
+        }
 
-        // 5. ලින්ක් එක ආරක්ෂිතව වෙන් කර ගැනීම
+        // දත්ත වෙන් කර ගැනීම
+        let parts = text.split(',').map(p => p ? p.trim() : '');
+        let channelLink = parts[0];
+        let emojiInput = parts[1] || '❤️';
+        let countInput = parts[2] || '1';
+        let delayInput = parts[3] || '1.5';
+
+        if (!channelLink || !channelLink.includes('whatsapp.com/channel/')) {
+            return m.reply('❌ කරුණාකර වලංගු WhatsApp Channel සබැඳියක් (Link) ඇතුළත් කරන්න.');
+        }
+
+        let count = parseInt(countInput);
+        if (isNaN(count) || count <= 0) count = 1;
+        if (count > 30) count = 30; // සීමාව ඉක්මවා යාම වැළැක්වීමට
+
+        let delaySec = parseFloat(delayInput);
+        if (isNaN(delaySec) || delaySec < 0.5) delaySec = 0.5;
+
+        m.reply('🔄 නාලිකා දත්ත පරීක්ෂා කරමින් පවතිනවා...');
+
         let urlClean = channelLink.split('channel/')[1];
-        if (!urlClean) return m.reply('❌ සබැඳියේ ආකෘතිය (Link Format) වැරදියි.');
+        if (!urlClean) return m.reply('❌ සබැඳියේ ආකෘතිය වැරදියි.');
         
         let linkParts = urlClean.split('/');
         let inviteCode = linkParts[0];
         let specificPostId = linkParts[1];
 
-        // 6. චැනල් මෙටා දත්ත පරීක්ෂාව (Crash Protection for Un-found Channels)
-        if (!conn.newsletterMetadata) {
-            return m.reply('❌ ඔබගේ බොට් බේස් එක (Baileys Version) WhatsApp Channels සඳහා සහය දක්වන්නේ නැත.');
-        }
-
-        let queryResult;
-        try {
-            queryResult = await conn.newsletterMetadata('invite', inviteCode);
-        } catch (e) {
-            return m.reply('❌ නාලිකාව (Channel) සොයා ගැනීමට නොහැකි විය. පුද්ගලික හෝ වැරදි සබැඳියක් විය හැක.');
-        }
-
+        // චැනල් මෙටා දත්ත ලබා ගැනීම
+        let queryResult = await conn.newsletterMetadata('invite', inviteCode).catch(() => null);
         if (!queryResult || !queryResult.id) {
-            return m.reply('❌ නාලිකාවේ අනන්‍යතාවය (JID) තහවුරු කර ගැනීමට නොහැකි විය.');
+            return m.reply('❌ නාලිකාව සොයා ගැනීමට නොහැකි විය. පුද්ගලික සබැඳියක් විය හැක.');
         }
         
         let channelJid = queryResult.id;
         let messageId;
 
-        // 7. පෝස්ට් එක ලබා ගැනීමේ ආරක්ෂිත ක්‍රියාවලිය
+        // පෝස්ට් එක තෝරා ගැනීම
         if (specificPostId) {
             messageId = parseInt(specificPostId);
-            if (isNaN(messageId)) return m.reply('❌ ලබා දී ඇති පෝස්ට් අංකය (Post ID) වලංගු නැත.');
         } else {
-            let messages;
-            try {
-                messages = await conn.fetchMessagesFromNewsletter({ jid: channelJid, count: 1 });
-            } catch (e) {
-                return m.reply('❌ නාලිකාවේ පණිවිඩ (Messages) කියවීමට බොටාට අවසර නැත.');
-            }
-
+            let messages = await conn.fetchMessagesFromNewsletter({ jid: channelJid, count: 1 }).catch(() => null);
             if (!messages || messages.length === 0) {
                 return m.reply('❌ මෙම නාලිකාව තුළ කිසිදු පණිවිඩයක් සොයා ගැනීමට නොහැකි විය.');
             }
             messageId = messages[0].id;
         }
 
-        // 8. සැබෑ ඉමෝජි ලැයිස්තුවක් සාදා ගැනීම (Safe Array conversion for Emojis)
         let emojiList = Array.from(emojiInput).filter(e => e.trim() !== "");
         if (emojiList.length === 0) emojiList = ['❤️'];
 
-        m.reply(`🚀 *ප්‍රතිචාර ක්‍රියාවලිය සාර්ථකව ආරම්භ විය:*\n\n• නාලිකාව: ${queryResult.name || 'WhatsApp Channel'}\n• පෝස්ට් අංකය: ${messageId}\n• වාර ගණන: ${count}\n• ප්‍රමාදය: තත්පර ${delaySec}`);
+        m.reply(`🚀 *ප්‍රතිචාර ක්‍රියාවලිය ආරම්භ විය:*\n\n• නාලිකාව: ${queryResult.name}\n• වාර ගණන: ${count}\n• ප්‍රමාදය: තත්පර ${delaySec}`);
 
-        // Custom Delay 
         const customDelay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-        // 9. ලූප් එක ඇතුළත සිදුවන දෝෂ වලින් මුළු සිස්ටම් එකම Crash වීම වැළැක්වීම
+        // ප්‍රතිචාර යැවීමේ ලූප් එක
         for (let i = 0; i < count; i++) {
             try {
                 let selectedEmoji = emojiList[Math.floor(Math.random() * emojiList.length)];
-
                 await conn.sendMessage(channelJid, {
                     react: {
                         text: selectedEmoji,
-                        key: {
-                            remoteJid: channelJid,
-                            id: messageId,
-                            fromMe: false
-                        }
+                        key: { remoteJid: channelJid, id: messageId, fromMe: false }
                     }
                 });
-            } catch (loopError) {
-                console.error("Reaction Loop Error:", loopError);
-                // එක් රියැක්ට් එකක් ෆේල් වුණත් මුළු බොටාම ක්‍රෑෂ් නොවී ඊළඟ එකට යයි.
+            } catch (err) {
+                console.error(err);
             }
             await customDelay(delaySec * 1000);
         }
 
-        return m.reply(`✅ *ක්‍රියාවලිය සාර්ථකව නිම කරන ලදී!*\nනාලිකාවේ පෝස්ට් එක සඳහා ප්‍රතිචාර යවා අවසන්.`);
+        return m.reply(`✅ *ක්‍රියාවලිය සාර්ථකයි!*`);
 
     } catch (globalError) {
-        console.error("Global Channel React Error:", globalError);
-        return m.reply(`❌ බලාපොරොත්තු නොවූ පද්ධතිමය දෝෂයක් සිදු විය:\n\`${globalError.message || globalError}\``);
+        console.error(globalError);
+        return m.reply(`❌ පද්ධතිමය දෝෂයක්: ${globalError.message}`);
     }
 });
 
