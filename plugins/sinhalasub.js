@@ -49,10 +49,15 @@ Sparky({
             const session = global.sinhalasub_sessions[m.sender];
 
             if (!session || !session.links || !session.links[numIndex]) {
+                // වැරදි අංකයක් දුන්නොත් ❌ රියැක්ට් එකක් දමයි
+                await client.sendMessage(m.jid, { react: { text: "❌", key: m.key } });
                 return await m.reply("❌ කරුණාකර ප්‍රථමයෙන් චිත්‍රපටයක් සර්ච් කර ලබාගත් ලැයිස්තුවේ ඇති වලංගු අංකයක් ලබාදෙන්න.");
             }
 
             const selectedLink = session.links[numIndex];
+            
+            // ඩවුන්ලෝඩ් එක පටන් ගන්නා විට ⏳ රියැක්ට් එකක් දමයි
+            await client.sendMessage(m.jid, { react: { text: "⏳", key: m.key } });
             await m.reply(`⏳ *ඔබ තෝරාගත් "${selectedLink.quality} (${selectedLink.size})" ෆයිල් එක WhatsApp වෙත අප්ලෝඩ් කරමින් පවතී. කරුණාකර රැඳී සිටින්න...*`);
 
             try {
@@ -63,9 +68,14 @@ Sparky({
                     fileName: `${session.title || "Movie"}_${selectedLink.quality}_${selectedLink.size}.mp4`,
                     caption: `🎬 *${session.title}*\n🎯 Quality: ${selectedLink.quality} (${selectedLink.size})\n\n> Powered by ${botName}`
                 }, { quoted: m });
+                
+                // සාර්ථකව සෙන්ඩ් වුණාම 🎬 රියැක්ට් එකක් දමයි
+                await client.sendMessage(m.jid, { react: { text: "🎬", key: m.key } });
                 return;
             } catch (dlErr) {
                 console.error("Direct download error:", dlErr.message);
+                // අප්ලෝඩ් එක ෆේල් වුණොත් ❌ රියැක්ට් එකක් දමයි
+                await client.sendMessage(m.jid, { react: { text: "❌", key: m.key } });
                 return await m.reply(`❌ WhatsApp හරහා ෆයිල් එක එවීමට නොහැකි විය. (විශාල ෆයිල් එකක් හෝ සර්වර් බාධාවක් විය හැක).\n\n🔗 කරුණාකර මෙම ලින්ක් එකෙන් කෙලින්ම බාගත කරගන්න:\n${selectedLink.direct_link}`);
             }
         }
@@ -74,9 +84,12 @@ Sparky({
         // ප්‍රධාන සර්ච් ක්‍රියාවලිය (Main Search Logic)
         // -------------------------------------------------------------
         if (!inputQuery) {
+            await client.sendMessage(m.jid, { react: { text: "⚠️", key: m.key } });
             return await m.reply(`*⚠️ කරුණාකර චිත්‍රපටයේ නම ලබාදෙන්න!*\n\n*භාවිතය:* \n${prefix}sinhalasub kishkindha kaandam`);
         }
 
+        // සර්ච් එක ආරම්භ කරන විට 🔍 රියැක්ට් එකක් දමයි
+        await client.sendMessage(m.jid, { react: { text: "🔍", key: m.key } });
         await m.reply(`🔍 *"${inputQuery}" චිත්‍රපටය Sinhalasub හි සොයමින් පවතිනවා... කරුණාකර රැඳී සිටින්න.*`);
 
         let targetUrl = inputQuery;
@@ -85,6 +98,7 @@ Sparky({
         }
 
         if (!targetUrl) {
+            await client.sendMessage(m.jid, { react: { text: "❌", key: m.key } });
             return await m.reply("❌ කණගාටුයි, එම නමින් චිත්‍රපටයක් සොයාගැනීමට නොහැකි විය. කරුණාකර නම නිවැරදිව type කරන්න.");
         }
 
@@ -95,6 +109,7 @@ Sparky({
         const resData = response.data;
 
         if (!resData || !resData.success || !resData.results || !resData.results.links) {
+            await client.sendMessage(m.jid, { react: { text: "❌", key: m.key } });
             return await m.reply("❌ කණගාටුයි, මෙම චිත්‍රපටයට අදාළ ඩවුන්ලෝඩ් ලින්ක්ස් ලබාගැනීමට නොහැකි විය.");
         }
 
@@ -103,7 +118,6 @@ Sparky({
         const displayTitle = targetUrl.split("/movies/")[1]?.replace(/-/g, " ").replace(/\//g, "").toUpperCase() || inputQuery.toUpperCase();
         const imagePoster = results.thumbnail ? results.thumbnail.trim() : "https://res.cloudinary.com/dqlh378fb/image/upload/v1780800370/zanta_media_uploads/y2qrw8srsw1v4dsu5wxv.jpg";
 
-        // යූසර්ගේ Session එක සේව් කර ගැනීම (පසුව ඩවුන්ලෝඩ් කරගැනීම සඳහා)
         global.sinhalasub_sessions[m.sender] = {
             title: displayTitle,
             links: linksArray
@@ -130,10 +144,13 @@ ${linksText}
 *Reply with:*
 ✅ _වලංගු ලින්ක් අංකය (උදා: 4) - ෆයිල් එක කෙලින්ම ලබාගැනීමට._
 
-✅ _.menu (ප්‍රධාන මෙනුවට යාමට)_
+✅ _.menu (ප්‍රධාන มෙනුවට යාමට)_
 
 • _*ඔබගේ සේවාව සදහා X KADIYA MD සැමවිටම සූදානම්.❤️‍🩹*_
 `;
+
+        // ලින්ක්ස් ටික සාර්ථකව ජනනය වී යවන විට ✅ රියැක්ට් එකක් දමයි
+        await client.sendMessage(m.jid, { react: { text: "✅", key: m.key } });
 
         await client.sendMessage(m.jid, {
             image: { url: imagePoster },
@@ -146,14 +163,13 @@ ${linksText}
         }, { quoted: m });
 
         // -------------------------------------------------------------
-        // Interactive Quick Reply Filter (අංකය විතරක් ගැහුවොත් වැඩ කරන කොටස)
+        // Interactive Quick Reply Filter
         // -------------------------------------------------------------
         const filter = (msg) => {
             if (!msg?.message) return false;
             if (msg.key.remoteJid !== m.jid) return false;
             if (msg.key.fromMe) return false;
             const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
-            // '1' (menu) හෝ ලින්ක්ස් ප්‍රමාණය ඇතුලත අංකයක්දැයි බැලීම
             return text === "1" || (!isNaN(text) && parseInt(text) > 0 && parseInt(text) <= linksArray.length);
         };
 
@@ -169,7 +185,7 @@ ${linksText}
             setTimeout(() => {
                 client.ev.off("messages.upsert", handler);
                 resolve(null);
-            }, 60000); // කාලය තත්පර 60 දක්වා වැඩි කරන ලදී
+            }, 60000);
         });
 
         if (!replyMsg) return;
@@ -180,13 +196,14 @@ ${linksText}
             const fakeMsg = { ...replyMsg, message: { conversation: `${prefix}menu` } };
             client.ev.emit("messages.upsert", { messages: [fakeMsg], type: "notify" });
         } else if (!isNaN(replyText)) {
-            // අංකය විතරක් ගැහුවොත්, .sinhalasub download <num> ලෙස විධානය නැවත ක්‍රියාත්මක කිරීම
             const fakeMsg = { ...replyMsg, message: { conversation: `${prefix}sinhalasub download ${replyText}` } };
             client.ev.emit("messages.upsert", { messages: [fakeMsg], type: "notify" });
         }
 
     } catch (err) {
         console.error("❌ Sinhalasub cmd error:", err);
+        // දෝෂයක් ආවොත් ❌ රියැක්ට් එකක් දමයි
+        try { await client.sendMessage(m.jid, { react: { text: "❌", key: m.key } }); } catch {}
         await m.reply("❌ Download command එකේ දෝෂයක්: " + err.message);
     }
 });
