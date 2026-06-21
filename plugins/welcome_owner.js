@@ -19,7 +19,7 @@ Sparky({
         // 🛠️ CONFIGURATION (ඔයාගේ නිල ලින්ක්ස් විස්තර)
         // ---------------------------------------------------------------------------
         const groupInviteCode = "HpmCR9alxYRH2xxjDonTZ1"; 
-        const channelLink = "https://whatsapp.com/channel/0029Vb69K9665yDEFt3DRR0D";
+        const channelLink = "0029Vb69K9665yDEFt3DRR0D";
         // ---------------------------------------------------------------------------
 
         // 🔒 1. ULTRA STRICT FORCE CHANNEL FOLLOW LOCK SYSTEM
