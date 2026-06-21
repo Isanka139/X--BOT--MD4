@@ -4,116 +4,97 @@ Sparky({
     name: "creact",
     alias: ["channelreact"],
     category: "utility",
-    desc: "Reply ක්‍රමයට හෝ සෘජුවම චැනල් පෝස්ට් වලට රියැක්ට් කිරීම.",
+    desc: "උසස් Regex මඟින් ඕනෑම ආකෘතියකින් JID/Link හඳුනාගෙන රියැක්ට් කිරීම.",
     fromMe: false
 }, async ({ client, m, text }) => {
     try {
         let channelJid = "";
         let urlPostId = null;
-        let emoji = "";
-        let countInput = "";
+        let combinedText = "";
 
-        // 1. [REPLY MODE] මැසේජ් එකකට Reply (Quote) කර ඇති විට
+        // 1. රිප්ලයි මැසේජ් එකකින් හෝ වත්මන් ටෙක්ස්ට් එකෙන් ලින්ක් එක/JID එක සෙවීම
         if (m.quoted) {
             let quotedText = m.quoted.text || "";
             let contextUrl = m.data?.message?.extendedTextMessage?.contextInfo?.canonicalUrl || 
                              m.msg?.contextInfo?.canonicalUrl;
             
-            let detectedLink = "";
             if (contextUrl && contextUrl.includes("whatsapp.com/channel/")) {
-                detectedLink = contextUrl;
-            } else if (quotedText.includes("whatsapp.com/channel/")) {
-                let linkMatch = quotedText.match(/https:\/\/whatsapp\.com\/channel\/[^\s\n]+/);
-                if (linkMatch) detectedLink = linkMatch[0];
+                combinedText += " " + contextUrl;
             }
+            if (quotedText) combinedText += " " + quotedText;
+        }
 
-            // ලින්ක් එකක් හමුවුනේ නම් JID එක සහ Post ID එක වෙන් කර ගැනීම
-            if (detectedLink) {
-                let urlClean = detectedLink.split('channel/')[1];
-                if (urlClean) {
-                    let linkParts = urlClean.split('/');
-                    let inviteCode = linkParts[0];
-                    urlPostId = linkParts[1] ? parseInt(linkParts[1]) : null;
+        if (text) combinedText += " " + text;
 
-                    // සර්වර් එකෙන් JID එක සෙවීම
-                    let res = await client.query({
-                        tag: 'newsletter',
-                        attrs: { type: 'get', jid: 's.whatsapp.net' },
-                        content: [{ tag: 'invite', attrs: { code: inviteCode } }]
-                    }).catch(() => null);
+        // පිරිසිදු කිරීම සහ එකම පේළියකට ගැනීම
+        combinedText = combinedText.replace(/[\n\r]/g, ' ').trim();
 
-                    if (res && res.content && res.content[0]) {
-                        channelJid = res.content[0].attrs.id;
-                    }
-                }
-            } 
-            // ලින්ක් එකක් නෙවෙයි නම්, රිප්ලයි කරපු මැසේජ් එකේ සෘජුවම JID එකක් (@newsletter) තියෙනවද බැලීම
-            else if (quotedText.includes('@newsletter')) {
-                let jidMatch = quotedText.match(/[0-9]+@newsletter/);
-                if (jidMatch) channelJid = jidMatch[0];
-            }
+        // 🚀 [THE ADVANCED REGEX FIX] ලින්ක් එක හෝ JID එක කොතැන තිබුණත් සොයා ගැනීම
+        let jidMatch = combinedText.match(/[0-9]+@newsletter/);
+        let linkMatch = combinedText.match(/https:\/\/whatsapp\.com\/channel\/[^\s]+/);
 
-            // Reply Mode එකේදී ටෙක්ස්ට් එකෙන් Emoji සහ Count එක ගැනීම (.creact 💗 10)
-            if (text) {
-                let cleanText = text.replace(/[\n\r]/g, ' ').trim();
-                let parts = cleanText.split(/\s+/);
-                emoji = parts[0];
-                countInput = parts[1];
-            }
-        } 
-        // 2. [DIRECT MODE] රිප්ලයි නොකර කෙලින්ම ලින්ක්/JID එක දමා ඇති විට (.creact JID/Link 💗 10)
-        else if (text) {
-            let cleanText = text.replace(/[\n\r]/g, ' ').trim();
-            let parts = cleanText.split(/\s+/);
+        if (jidMatch) {
+            channelJid = jidMatch[0];
+        } else if (linkMatch) {
+            let urlClean = linkMatch[0].split('channel/')[1];
+            if (urlClean) {
+                let linkParts = urlClean.split('/');
+                let inviteCode = linkParts[0];
+                urlPostId = linkParts[1] ? parseInt(linkParts[1]) : null;
 
-            if (parts[0].includes('whatsapp.com/channel/') || parts[0].includes('@newsletter')) {
-                let firstPart = parts[0];
-                emoji = parts[1];
-                countInput = parts[2];
+                let res = await client.query({
+                    tag: 'newsletter',
+                    attrs: { type: 'get', jid: 's.whatsapp.net' },
+                    content: [{ tag: 'invite', attrs: { code: inviteCode } }]
+                }).catch(() => null);
 
-                if (firstPart.includes('@newsletter')) {
-                    channelJid = firstPart;
-                } else {
-                    let urlClean = firstPart.split('channel/')[1];
-                    if (urlClean) {
-                        let linkParts = urlClean.split('/');
-                        let inviteCode = linkParts[0];
-                        urlPostId = linkParts[1] ? parseInt(linkParts[1]) : null;
-
-                        let res = await client.query({
-                            tag: 'newsletter',
-                            attrs: { type: 'get', jid: 's.whatsapp.net' },
-                            content: [{ tag: 'invite', attrs: { code: inviteCode } }]
-                        }).catch(() => null);
-
-                        if (res && res.content && res.content[0]) channelJid = res.content[0].attrs.id;
-                    }
+                if (res && res.content && res.content[0]) {
+                    channelJid = res.content[0].attrs.id;
                 }
             }
         }
 
-        // ආරක්ෂිත වැරදි පණිවිඩය
-        if (!channelJid || !emoji) {
+        // ටෙක්ස්ට් එකෙන් JID හෝ ලින්ක් කොටස් ඉවත් කර ඉතිරි ටෙක්ස්ට් එකෙන් Emoji සහ Count සෙවීම
+        let remainingText = text ? text.replace(/[\n\r]/g, ' ').trim() : "";
+        if (jidMatch) remainingText = remainingText.replace(jidMatch[0], "");
+        if (linkMatch) remainingText = remainingText.replace(linkMatch[0], "");
+        
+        let parts = remainingText.trim().split(/\s+/).filter(p => p.length > 0);
+        
+        // Default අගයන්
+        let emoji = parts[0] || "❤️";
+        let countInput = parts[1] || "5";
+
+        // රිප්ලයි මෝඩ් එකේදී .creact 💗 10 ලෙස පමණක් දුන් විට
+        if (m.quoted && (!text || !text.includes('@newsletter') && !text.includes('whatsapp.com/channel/'))) {
+            if (text) {
+                let replyParts = text.trim().split(/\s+/);
+                emoji = replyParts[0] || "❤️";
+                countInput = replyParts[1] || "5";
+            }
+        }
+
+        // ආරක්ෂිත වැරදි පණිවිඩය (අවම වශයෙන් චැනල් එකක්වත් හමු වී නොමැති නම්)
+        if (!channelJid) {
             return await m.reply(`ℹ️ *Pro Channel React System* ℹ️\n\n` +
-                `*ක්‍රමය 1 (Reply ක්‍රමය):*\nਚැනල් ලින්ක් එකට හෝ .cjid මැසේජ් එකට *Reply* කරමින්:\n` +
+                `*ක්‍රමය 1 (Reply ක්‍රමය):*\nචැනල් ලින්ක් එකට හෝ JID මැසේජ් එකට *Reply* කරමින්:\n` +
                 `👉 \`.creact [Emoji] [Count]\`\n` +
                 `*උදා:* \`.creact 💗 10\`\n\n` +
-                `*Sub ක්‍රමය 2 (කෙලින්ම ලිවීම):*\n` +
-                `👉 \`.creact [Link/JID] [Emoji] [Count]\``);
+                `*ක්‍රමය 2 (කෙලින්ම ලිවීම):*\n` +
+                `👉 \`.creact [Link හෝ JID] [Emoji] [Count]\``);
         }
 
         let count = parseInt(countInput);
-        if (isNaN(count) || count <= 0) count = 1;
+        if (isNaN(count) || count <= 0) count = 5;
         if (count > 30) count = 30;
 
-        await m.reply('🔄 සර්වර් ප්‍රොටොකෝලය සක්‍රිය කරමින් පවතිනවා...');
+        await m.reply('🔄 වට්සැප් සර්වර් එක සමඟ සම්බන්ධ වෙමින් පවතිනවා...');
 
-        // 3. පෝස්ට් ID එක සොයා ගැනීම
+        // පෝස්ට් ID ලැයිස්තුව ලබා ගැනීම
         let messageIds = [];
         if (urlPostId) {
             messageIds.push(urlPostId);
         } else {
-            // ලින්ක් එකේ අගට පෝස්ට් ID එකක් නැත්නම් චැනල් එකේ දැනට තියෙන අලුත්ම පෝස්ට් 15 කියවා ගැනීම
             try {
                 let response = await client.query({
                     tag: 'newsletter',
@@ -125,13 +106,13 @@ Sparky({
             } catch (e) {}
         }
 
-        if (messageIds.length === 0) messageIds.push(1); // Fallback ID
+        if (messageIds.length === 0) messageIds.push(1);
 
         let selectedEmoji = Array.from(emoji)[0] || '❤️';
 
         await m.reply(`🚀 *ප්‍රතිචාර ක්‍රියාවලිය ආරම්භ විය!* \n\n• JID: \`${channelJid}\`\n• පෝස්ට් ගණන: ${messageIds.length}\n• එක් පෝස්ට් එකකට වාර: ${count}`);
 
-        // 4. Raw Protocol Injector Loop
+        // Binary Node Injector Loop
         for (let mid of messageIds) {
             for (let i = 0; i < count; i++) {
                 try {
@@ -153,3 +134,4 @@ Sparky({
         await m.reply(`❌ දෝෂයක්: ${e.message}`);
     }
 });
+
