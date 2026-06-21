@@ -1,4 +1,49 @@
 const { Sparky, isPublic } = require("../lib");
+const fs = require("fs");
+const path = require("path");
+
+// 📂 ප්ලගින් එක තියෙන තැනම ආරක්ෂිතව ෆයිල් එක හදමු
+const DATA_FILE = path.join(__dirname, "autoreplies_v2.json");
+
+// 🧠 Memory cache
+let autoReplies = [];
+
+// -------------------------
+// LOAD DATA (දත්ත කියවීම)
+// -------------------------
+function loadData() {
+    try {
+        if (!fs.existsSync(DATA_FILE)) {
+            fs.writeFileSync(DATA_FILE, JSON.stringify([], null, 2), "utf-8");
+            autoReplies = [];
+            return;
+        }
+        const fileContent = fs.readFileSync(DATA_FILE, "utf-8");
+        if (!fileContent.trim()) {
+            autoReplies = [];
+        } else {
+            autoReplies = JSON.parse(fileContent);
+        }
+    } catch (err) {
+        console.error("❌ [AutoReply] Load error:", err);
+        // Error එකක් ආවොත් පරණ දත්ත මැකෙන්න නොදී බේරගන්නවා
+    }
+}
+
+// -------------------------
+// SAVE DATA (දත්ත සුරැකීම)
+// -------------------------
+function saveData() {
+    try {
+        const dataToSave = JSON.stringify(autoReplies, null, 2);
+        fs.writeFileSync(DATA_FILE, dataToSave, "utf-8");
+    } catch (err) {
+        console.error("❌ [AutoReply] Save error:", err);
+    }
+}
+
+// Start වෙද්දීම load කරගන්නවා
+loadData();
 
 // ======================================================
 // ➕ ADD AUTO REPLY (OWNER ONLY)
@@ -7,9 +52,9 @@ Sparky({
     name: "addreply",
     alias: ["ar"],
     category: "tools",
-    fromMe: true, // දැන් ඔයාට විතරක් වැඩ කරයි (Locked වෙන්නේ නැත)
+    fromMe: true, // දැන් Command locked වෙන්නේ නැහැ, ඔයාට විතරක් වැඩ කරයි
     desc: "Add auto reply keyword"
-}, async ({ m, text, client }) => {
+}, async ({ m, text }) => {
     try {
         let inputBody = text || m.text || m.body || "";
         
@@ -31,24 +76,23 @@ Sparky({
             return m.reply("❌ Keyword or reply missing!");
         }
 
-        // Bot එකේ දැනට තියෙන Database එකෙන් Auto Reply එකක් තියෙනවද බලනවා
-        // (X-BOT-MD database එකට සෘජුවම සම්බන්ධයි)
-        if (client.database && client.database.get) {
-            let currentData = await client.database.get("auto_replies") || [];
-            
-            const exists = currentData.find(r => r.keyword === keyword);
-            if (exists) {
-                return m.reply("⚠️ This keyword already exists!");
-            }
-
-            currentData.push({ keyword, reply, createdAt: Date.now() });
-            await client.database.set("auto_replies", currentData);
-        } else {
-            return m.reply("❌ Main database connection failed inside plugin!");
+        loadData(); // අලුත්ම දත්ත කියවනවා
+        
+        const exists = autoReplies.find(r => r.keyword === keyword);
+        if (exists) {
+            return m.reply("⚠️ This keyword already exists!");
         }
 
+        autoReplies.push({
+            keyword,
+            reply,
+            createdAt: Date.now()
+        });
+
+        saveData(); // සුරැකීම සිදු කරනවා
+
         return m.reply(
-            `✅ Auto reply saved to Cloud DB!\n\n🔑 Keyword: ${keyword}\n💬 Reply: ${reply}`
+            `✅ Auto reply saved!\n\n🔑 Keyword: ${keyword}\n💬 Reply: ${reply}`
         );
 
     } catch (err) {
@@ -67,7 +111,7 @@ Sparky({
     category: "tools",
     fromMe: true, // Owner Only
     desc: "Delete auto reply keyword"
-}, async ({ m, text, client }) => {
+}, async ({ m, text }) => {
     try {
         let inputKey = text || m.text || m.body || "";
         if (inputKey.startsWith(".")) {
@@ -80,21 +124,16 @@ Sparky({
             return m.reply("❌ Usage:\n.delreply keyword");
         }
 
-        if (client.database && client.database.get) {
-            let currentData = await client.database.get("auto_replies") || [];
-            const before = currentData.length;
-            
-            currentData = currentData.filter(r => r.keyword !== key);
+        loadData();
+        const before = autoReplies.length;
+        autoReplies = autoReplies.filter(r => r.keyword !== key);
 
-            if (before === currentData.length) {
-                return m.reply("❌ Keyword not found!");
-            }
-
-            await client.database.set("auto_replies", currentData);
-            return m.reply(`🗑️ Deleted auto reply for: ${key}`);
-        } else {
-            return m.reply("❌ Database error!");
+        if (before === autoReplies.length) {
+            return m.reply("❌ Keyword not found!");
         }
+
+        saveData();
+        return m.reply(`🗑️ Deleted auto reply for: ${key}`);
 
     } catch (err) {
         console.error("DelReply Error:", err);
@@ -112,20 +151,16 @@ Sparky({
     category: "tools",
     fromMe: true, // Owner Only
     desc: "Show all auto replies"
-}, async ({ m, client }) => {
+}, async ({ m }) => {
     try {
-        if (!client.database || !client.database.get) {
-            return m.reply("❌ Database connection error!");
+        loadData();
+
+        if (!autoReplies.length) {
+            return m.reply("📭 No auto replies found!");
         }
 
-        let currentData = await client.database.get("auto_replies") || [];
-
-        if (!currentData.length) {
-            return m.reply("📭 No auto replies found in Database!");
-        }
-
-        let msg = "📌 *AUTO REPLIES LIST (CLOUD DB)*\n\n";
-        currentData.forEach((r, i) => {
+        let msg = "📌 *AUTO REPLIES LIST*\n\n";
+        autoReplies.forEach((r, i) => {
             msg += `${i + 1}. 🔑 *${r.keyword}* ➜ 💬 ${r.reply}\n\n`;
         });
 
@@ -144,25 +179,21 @@ Sparky({
 Sparky({
     on: "text",
     fromMe: isPublic
-}, async ({ m, client }) => {
+}, async ({ m }) => {
     try {
         const rawText = m.body || m.text || "";
         const msg = rawText.toLowerCase().trim();
         
-        // Command එකක් නම් හෝ මැසේජ් එකක් නැත්නම් skip කරනවා
         if (!msg || msg.startsWith(".")) return;
 
-        if (!client.database || !client.database.get) return;
-        
-        // මැසේජ් එකක් ආපු ගමන් Database එකෙන් ලිස්ට් එක ගන්නවා
-        let currentData = await client.database.get("auto_replies") || [];
+        loadData(); // හැම වෙලේම අලුත්ම දත්ත update කරගන්නවා
 
-        // Exact match (හරියටම සමානද බලනවා)
-        let rule = currentData.find(r => msg === r.keyword);
+        // Exact match
+        let rule = autoReplies.find(r => msg === r.keyword);
 
-        // Fallback partial match (මැසේජ් එක ඇතුලේ වචනය තියෙනවද බලනවා)
+        // Partial match
         if (!rule) {
-            rule = currentData.find(r => msg.includes(r.keyword));
+            rule = autoReplies.find(r => msg.includes(r.keyword));
         }
 
         if (rule) {
