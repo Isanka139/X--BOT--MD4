@@ -5,12 +5,9 @@ Sparky({
     alias: ["creact", "chreact"],
     category: "utility",
     desc: "WhatsApp Channels සඳහා ස්වයංක්‍රීය ප්‍රතිචාර දැක්වීම.",
-    fromMe: false // හැමෝටම පාවිච්චි කරන්න පුළුවන් (Public)
-}, async ({ client, m, args }) => {
+    fromMe: false // Public Version
+}, async ({ client, m, text }) => {
     try {
-        // args Array එක එකතු කරලා string එකක් කර ගැනීම
-        let text = args.join(" ");
-
         // 1. හිස් ආදාන පරීක්ෂාව
         if (!text || text.trim() === "") {
             return await m.reply(`ℹ️ *Pro Channel React පද්ධතිය* ℹ️\n\n` +
@@ -46,7 +43,7 @@ Sparky({
         let inviteCode = linkParts[0];
         let specificPostId = linkParts[1];
 
-        // 3. චැනල් මෙටා දත්ත ලබා ගැනීම (Sparky බේස් එකේ client මඟින්)
+        // 3. චැනල් මෙටා දත්ත ලබා ගැනීම
         let queryResult = await client.newsletterMetadata('invite', inviteCode).catch(() => null);
         if (!queryResult || !queryResult.id) {
             return await m.reply('❌ නාලිකාව සොයා ගැනීමට නොහැකි විය. පුද්ගලික සබැඳියක් විය හැක.');
