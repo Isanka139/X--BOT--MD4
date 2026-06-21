@@ -2,46 +2,56 @@ const { Sparky, isPublic } = require("../lib");
 const fs = require("fs");
 const path = require("path");
 
-// 📂 ලෙඩ දෙන database ෆෝල්ඩර් අයින් කරලා කෙලින්ම මේ ප්ලගින් එක තියෙන තැනම ෆයිල් එක හදමු
+// 📂 Auto replies සුරැකෙන JSON ෆයිල් එකේ path එක
 const DATA_FILE = path.join(__dirname, "autoreplies.json");
 
 // 🧠 Memory cache
 let autoReplies = [];
 
 // -------------------------
-// LOAD DATA
+// LOAD DATA (දත්ත කියවීම)
 // -------------------------
 function loadData() {
     try {
         if (!fs.existsSync(DATA_FILE)) {
+            // ෆයිල් එක නැත්නම් විතරක් අලුත් එකක් හදනවා
             fs.writeFileSync(DATA_FILE, JSON.stringify([], null, 2), "utf-8");
             console.log("📝 [AutoReply] New JSON file created at:", DATA_FILE);
+            autoReplies = [];
+            return;
         }
+        
         const fileContent = fs.readFileSync(DATA_FILE, "utf-8");
-        autoReplies = JSON.parse(fileContent);
+        
+        // ෆයිල් එක ඇතුලේ දත්ත තියෙනවද කියලා ෂුවර් කරගන්නවා
+        if (fileContent.trim() === "") {
+            autoReplies = [];
+        } else {
+            autoReplies = JSON.parse(fileContent);
+        }
+        
         console.log(`🧠 [AutoReply] Loaded ${autoReplies.length} rules successfully.`);
     } catch (err) {
         console.error("❌ [AutoReply] Load error:", err);
-        autoReplies = [];
+        // Error එකක් ආවොත් cache එක විතරක් හිස් කරනවා, හැබැයි file එක overwrite කරන්නේ නැහැ
     }
 }
 
 // -------------------------
-// SAVE DATA
+// SAVE DATA (දත්ත සුරැකීම)
 // -------------------------
 function saveData() {
     try {
-        const fd = fs.openSync(DATA_FILE, "w");
-        fs.writeFileSync(fd, JSON.stringify(autoReplies, null, 2), "utf-8");
-        fs.fdatasyncSync(fd); // Storage එකටම ලියන්න බල කරනවා (Force write)
-        fs.closeSync(fd);
-        console.log("💾 [AutoReply] Data successfully flushed to disk.");
+        // සරල සහ ආරක්ෂිත ක්‍රමයකට කෙලින්ම write කරනවා (openSync/fd වල ලෙඩ මගහරින්න)
+        const dataToSave = JSON.stringify(autoReplies, null, 2);
+        fs.writeFileSync(DATA_FILE, dataToSave, "utf-8");
+        console.log("💾 [AutoReply] Data successfully saved to disk.");
     } catch (err) {
         console.error("❌ [AutoReply] Save error:", err);
     }
 }
 
-// Load on start
+// බොට් ස්ටාර්ට් වෙද්දීම තියෙන දත්ත ටික කියවා ගන්නවා
 loadData();
 
 
@@ -76,8 +86,9 @@ Sparky({
             return m.reply("❌ Keyword or reply missing!");
         }
 
-        // duplicate check
-        loadData(); // සේව් කරන්න කලින් ෆයිල් එක ආයේ කියවමු
+        // අලුත් එකක් දාන්න කලින් current file එකේ තියෙන ඒවා ආයෙත් load කරගන්නවා
+        loadData(); 
+        
         const exists = autoReplies.find(r => r.keyword === keyword);
         if (exists) {
             return m.reply("⚠️ This keyword already exists!");
@@ -186,7 +197,7 @@ Sparky({
         
         if (!msg || msg.startsWith(".")) return;
 
-        // මැසේජ් එකක් ආවම ලිස්ට් එක අප්ඩේට් එකක්ද බලන්න ෆයිල් එක කියවනවා
+        // මැසේජ් එකක් ආවම අලුත්ම ලිස්ට් එක load කරගන්නවා
         loadData();
 
         // exact match first
