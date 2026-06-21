@@ -2,7 +2,7 @@ const { Sparky, isPublic } = require("../lib");
 const axios = require("axios");
 const config = require("../config");
 
-// සයිට් එකෙන් ෆิල්ම් එක සර්ච් කරලා පළමු ලින්ක් එක ගන්නා ශ්‍රිතය
+// සයිට් එකෙන් ෆිල්ම් එක සර්ච් කරලා පළමු ලින්ක් එක ගන්නා ශ්‍රිතය
 async function searchSinhalaSub(movieName) {
     try {
         // WordPress සර්ච් URL එක
@@ -40,7 +40,7 @@ Sparky({
         const botName = config.BOT_INFO?.split(";")[0] || "SADEW-MINI";
         const prefix = m.prefix || ".";
         
-        // දෝෂය නිවැරදි කිරීම: args කියන්නේ array එකක්ද string එකක්ද කියලා බලලා text එක වෙන් කරගැනීම
+        // args Array එකක්ද String එකක්ද කියලා බලලා text එක වෙන් කරගැනීම
         let movieQuery = "";
         if (args) {
             movieQuery = Array.isArray(args) ? args.join(" ").trim() : args.toString().trim();
@@ -62,7 +62,7 @@ Sparky({
         }
 
         if (!targetUrl) {
-            return await m.reply("❌ කණගාටුයි, එම නමින් චිත්‍රපටයක් සොයාගැනීමට නොහැකි විය. කරුණාකර නම නිවැරදිව type කරන්න.");
+            return await m.reply("❌ කණගาටුයි, එම නමින් චිත්‍රපටයක් සොයාගැනීමට නොහැකි විය. කරුණාකර නම නිවැරදිව type කරන්න.");
         }
 
         // 2. සොයාගත් ලින්ක් එක ඔයාගේ API එකට යවා බයිපාස් ලින්ක් එක ලබාගැනීම
@@ -70,14 +70,29 @@ Sparky({
         const apiUrl = `https://api.zanta-mini.store/api/sinhalasub/dl?apiKey=${apiKey}&text=${encodeURIComponent(targetUrl)}`;
 
         const response = await axios.get(apiUrl);
-        let downloadLink = response.data;
+        
+        // Terminal එකේ බලාගන්න API එකෙන් ආපු ඩේටා ටික print කරනවා
+        console.log("=== SINHALASUB API RESPONSE ===");
+        console.log(response.data);
+        console.log("===============================");
 
-        if (typeof downloadLink === 'object' && downloadLink.result) {
-            downloadLink = downloadLink.result;
+        let downloadLink = "";
+
+        // API එකෙන් විවිධ ක්‍රම වලට ඩේටා ආවොත් ඒ හැම එකක්ම චෙක් කරනවා
+        if (typeof response.data === 'string') {
+            downloadLink = response.data.trim();
+        } else if (response.data && response.data.result) {
+            downloadLink = response.data.result.toString().trim();
+        } else if (response.data && response.data.link) {
+            downloadLink = response.data.link.toString().trim();
+        } else if (response.data && response.data.url) {
+            downloadLink = response.data.url.toString().trim();
         }
 
-        if (!downloadLink || !downloadLink.toString().startsWith('http')) {
-            return await m.reply("❌ කණගාටුයි, මෙම චිත්‍රපටයට අදාළ ඩවුන්ලෝඩ් ලින්ක් එක ලබාගැනීමට නොහැකි විය.");
+        // ලින්ක් එකක් ලැබුණේ නැත්නම් හෝ http එකෙන් පටන් ගන්නේ නැත්නම් දෝෂය පෙන්වනවා
+        if (!downloadLink || !downloadLink.startsWith('http')) {
+            let apiErrorDetail = typeof response.data === 'object' ? JSON.stringify(response.data) : response.data;
+            return await m.reply(`❌ කණගාටුයි, මෙම චිත්‍රපටයට අදාළ ඩවුන්ලෝඩ් ලින්ක් එක ලබාගැනීමට නොහැකි විය.\n\n*API Response:* ${apiErrorDetail}`);
         }
 
         // ෆිල්ම් එකේ නම පෝස්ට් ලින්ක් එකෙන් ලස්සනට වෙන් කරගැනීම
@@ -175,3 +190,4 @@ Sparky({
         await m.reply("❌ Download command එකේ දෝෂයක්: " + err.message);
     }
 });
+
