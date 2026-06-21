@@ -1,5 +1,5 @@
 {
-  "name": "X-BOT-MD",
+  "name": "❖Ƭʜᴇ 𝐗-𝐊𝐀𝐃𝐈𝐘𝐀-𝐌𝐃 💎",
   "version": "3.7.0",
   "description": "X-BOT-MD is a powerful WhatsApp Helper Bot packed with features like media handling, automation, and more.",
   "main": "index.js",
@@ -7,7 +7,7 @@
     "start": "pm2 start . --attach --name X-BOT-MD",
     "stop": "pm2 stop . --attach --name X-BOT-MD"
   },
-  "author": "ASWIN SPARKY",
+  "author": "Ianka",
   "license": "ISC",
   "repository": {
     "type": "git",
