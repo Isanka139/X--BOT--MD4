@@ -45,32 +45,22 @@ Sparky({
             const downloadApiUrl = `https://api.zanta-mini.store/api/modapk/dl?apiKey=${apiKey}&url=${encodeURIComponent(targetUrl)}`;
 
             await client.sendMessage(m.jid, { react: { text: "📥", key: m.key } });
-            await m.reply(`⏳ *ඔබ තෝරාගත් "${selectedApp.title || 'App'}" APK ෆයිල් එක සර්වර් එක හරහා බාගත කරමින් පවතී. (මෙය ඇප් එකේ ප්‍රමාණය අනුව විනාඩියක් පමණ ගත විය හැක)...*`);
+            await m.reply(`⏳ *ඔබ තෝරාගත් "${selectedApp.title || 'App'}" (Large File) APK එක සර්වර් එක හරහා සෘජුවම WhatsApp වෙත Stream වෙමින් පවතී. කරුණාකර රැඳී සිටින්න...*`);
 
             try {
-                // [FIX] - API ලින්ක් එක කෙලින්ම නොයවා, සර්වර් එක ඇතුළට Buffer එකක් විදිහට මුලින්ම බාගත කිරීම.
-                const apkResponse = await axios({
+                // [FIX] - RAM එක පිරීම වැලැක්වීමට arraybuffer වෙනුවට stream එකක් ලෙස දත්ත ලබාගැනීම
+                const responseStream = await axios({
                     method: 'get',
                     url: downloadApiUrl,
-                    responseType: 'arraybuffer', // සැබෑ APK දත්ත (Binary Data) ලබාගැනීමට
+                    responseType: 'stream', // Stream එකක් ලෙස දත්ත ලබාගන්නවා
                     headers: {
                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                    },
-                    timeout: 300000 // විනාඩි 5ක උපරිම කාලයක් (ලොකු ෆයිල් සඳහා)
+                    }
                 });
 
-                const apkBuffer = Buffer.from(apkResponse.data);
-
-                // ලබාගත් Buffer එකේ ප්‍රමාණය පරීක්ෂා කිරීම (KB 10කට වඩා අඩුනම් එය Error එකකි)
-                if (apkBuffer.length < 10240) {
-                     throw new Error("බාගත වූ ගොනුව ඉතා කුඩාය. API සීමාවක් හෝ දෝෂයක් විය හැක.");
-                }
-
-                await m.reply(`✨ *බාගත කිරීම සාර්ථකයි! දැන් WhatsApp වෙත අප්ලෝඩ් වෙමින් පවතී...*`);
-
-                // නිවැරදි Buffer එක WhatsApp එකට ලබාදීම (දැන් නියම MB ගණනම වැටේ)
+                // කෙලින්ම Stream එක WhatsApp document එකට Pass කිරීම (No RAM issues, No 0.3KB bugs)
                 await client.sendMessage(m.jid, {
-                    document: apkBuffer,
+                    document: responseStream.data, 
                     mimetype: 'application/vnd.android.package-archive',
                     fileName: `${(selectedApp.title || "ModApp").replace(/[^a-zA-Z0-9]/g, "_")}_X_KADIYA.apk`,
                     caption: `📦 *${selectedApp.title || 'Mod App'}* Mod APK\n\n> Powered by ${botName}`
@@ -79,9 +69,9 @@ Sparky({
                 await client.sendMessage(m.jid, { react: { text: "✅", key: m.key } });
                 return;
             } catch (dlErr) {
-                console.error("APK Buffer download error:", dlErr.message);
+                console.error("APK Stream upload error:", dlErr.message);
                 await client.sendMessage(m.jid, { react: { text: "❌", key: m.key } });
-                return await m.reply(`❌ *WhatsApp හරහා ෆයිල් එක එවීමට නොහැකි විය!*\n\n🔗 *නමුත් ඔබට මෙම ලින්ක් එක Browser එකට දමා කෙලින්ම බාගත කරගත හැක:*\n${downloadApiUrl}`);
+                return await m.reply(`❌ *WhatsApp හරහා ෆයිල් එක එවීමට නොහැකි විය!* (මෙය සර්වර් එකෙහි ඇති බාධාවක් විය හැක).\n\n🔗 *නමුත් ඔබට මෙම ලින්ක් එකෙන් කෙලින්ම බාගත කරගත හැක:*\n${downloadApiUrl}`);
             }
         }
 
