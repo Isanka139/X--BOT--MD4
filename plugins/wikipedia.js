@@ -147,7 +147,7 @@ Sparky({
         try { if (typeof m.react === "function") await m.react("📚"); } catch {}
         
         // පිරිසිදු සිංහල අවසන් මැසේජ් එක
-        const formattedResponse = `🏛️ *𝙒𝙄𝙆𝙄𝙋𝙀𝘿𝙄𝘼 𝙎𝙀𝘼𝙍𝘾𝙃 (සිංහල)* 🏛️\n\n📌 *Query:* ${query}\n\n${wikiResult.trim()}\n\n_Powered by X-Bot-MD_`;
+        const formattedResponse = `🏛️ *𝙒𝙄𝙆𝙄𝙋𝙀𝘿𝙄𝘼 𝙎𝙀𝘼𝙍𝘾𝙃 (සිංහල)* \n\n📌 *Query:* ${query}\n\n${wikiResult.trim()}\n\n_*Powered by X-Kadiya-MD*_`;
         await sendMsg(formattedResponse);
 
     } catch (error) {
