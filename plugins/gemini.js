@@ -109,7 +109,7 @@ Sparky({
         try { if (typeof m.react === "function") await m.react("✨"); } catch {}
         
         // අවසන් පිරිසිදු මැසේජ් එක (Heading Hashes සහ Title typo එක නිවැරදි කර ඇත)
-        const formattedResponse = `✨ *👑 𝙂𝙀𝙈context 𝘼𝙄 𝘼𝙎𝙎𝙄𝙎𝙏𝘼𝙉𝙏 👑* ✨\n\n${aiResult.trim()}\n\n_Powered by X-Bot-MD_`;
+        const formattedResponse = `✨ *🧠 𝙂𝙀𝙈𝙄𝙉𝙄 𝘼𝙄 𝘼𝙎𝙎𝙄𝙎𝙏𝘼𝙉𝙏 🧠* ✨\n\n${aiResult.trim()}\n\n*_𝙋𝙊𝙒𝙀𝙍𝙀𝘿 𝘽𝙔 𝙓 𝙆𝘼𝘿𝙄𝙔𝘼 𝘽𝙊𝙏_*`;
         await sendMsg(formattedResponse);
 
     } catch (error) {
