@@ -1,9 +1,11 @@
 const { Sparky, isPublic } = require("../lib");
 const axios = require("axios");
 
-// 🌐 Zanta-Mini Store API Configuration
-const API_KEY = "zan_w8lSd1pK_t79f2pa52p";
-const BASE_URL = "https://api.zanta-mini.store/api/ytdl";
+// 🌐 Configuration
+const API_TOKEN = "07CRv4";
+// සටහන: බොහෝ WhiteShadow API වල ytdl/download endpoint එක පවතී. 
+// මෙහිදී වඩාත්ම ස්ථාවර සහ වේගවත් පොදු බාගත කිරීමේ එන්ජිම සම්බන්ධ කර ඇත.
+const DOWNLOAD_API_URL = "https://whiteshadow-x-api.onrender.com/api/download/ytmp3"; 
 
 /**
  * 📱 YouTube URL Extraction Utility
@@ -15,41 +17,50 @@ function extractYoutubeUrl(text) {
 }
 
 /**
- * 🚀 Core Downloader Engine (Built-in Search + Zanta Download)
+ * 🎵 Professional MP3 Downloader Plugin
  */
-async function downloadMedia(m, client, args, isVideo = false) {
+Sparky({
+    name: "song",
+    fromMe: isPublic,
+    category: "download",
+    desc: "Download MP3 Songs easily via WhiteShadow Engine."
+}, async ({ m, client, args }) => {
+    
+    // 🛡️ Fail-Safe Text Message Sender
     const sendMsg = async (text) => {
         try {
             if (typeof m.reply === "function") await m.reply(text);
             else await client.sendMessage(m.jid, { text }, { quoted: m });
         } catch (e) {
-            console.error("[X-BOT-MD] Message failed:", e.message);
+            console.error("[X-BOT-MD SONG] Message failed:", e.message);
         }
     };
 
     try {
+        // Input text එක ලබා ගැනීම
         let textInput = Array.isArray(args) ? args.join(" ").trim() : String(args || "").trim();
         textInput = textInput || m.quoted?.text || "";
 
         if (!textInput) {
-            return await sendMsg(`🎵 *X-BOT-MD YOUTUBE SYSTEM*\n\nකරුණාකර සින්දුවක නමක් හෝ YouTube ලින්ක් එකක් ලබා දෙන්න.\n\n💡 _උදා: .song master sir_`);
+            return await sendMsg(`🎵 *X-BOT-MD SONG DOWNLOADER*\n\nකරුණාකර සින්දුවක නමක් හෝ YouTube ලින්ක් එකක් ලබා දෙන්න.\n\n💡 _උදා: .song master sir_`);
         }
 
+        // Reaction: Searching 🔎
         try { if (typeof m.react === "function") await m.react("🔎"); } catch {}
 
         const checkedUrl = extractYoutubeUrl(textInput);
         let youtubeUrl = null;
-        let mediaTitle = isVideo ? "X-BOT-MD Video" : "X-BOT-MD Audio";
+        let mediaTitle = "X-Bot Audio";
 
-        // 1. RESOLVING INPUT (LINK OR BUILT-IN SEARCH)
+        // 1. RESOLVING INPUT (LINK OR BUILT-IN INTERNAL SEARCH)
         if (checkedUrl) {
             youtubeUrl = checkedUrl;
-            await sendMsg("🔗 _YouTube Link Detected. Processing URL..._");
+            await sendMsg("🔗 _YouTube ලින්ක් එක හඳුනාගත්තා. ක්‍රියාවලිය ආරම්භ කරමින්..._");
         } else {
             await sendMsg(`🔍 _Searching for_ *"${textInput}"* _on YouTube..._`);
             
             try {
-                // කිසිම API එකක් නැතුව බොට් ඇතුලෙන්ම සෙවීමට yt-search භාවිතය
+                // කිසිම බාහිර API එකක් නැතුව බොට් ඇතුලෙන්ම සෙවීමට yt-search භාවිතය
                 const yts = require("yt-search");
                 const searchResult = await yts(textInput);
                 
@@ -57,20 +68,18 @@ async function downloadMedia(m, client, args, isVideo = false) {
                     const firstResult = searchResult.videos[0];
                     youtubeUrl = firstResult.url;
                     mediaTitle = firstResult.title || mediaTitle;
-                    console.log("[X-BOT-MD] Internal Search Success:", youtubeUrl);
                 }
             } catch (searchErr) {
-                console.error("[X-BOT-MD] Internal Search Library Error:", searchErr.message);
-                
-                // Backup Method: yt-search නැත්නම් සෘජුවම සෙවිය හැකි පොදු ලින්ක් එකක්
+                console.error("[X-BOT-MD SONG] Internal Search Error, trying backup:", searchErr.message);
+                // Backup Search Method
                 try {
-                    const backupRes = await axios.get(`https://api.giftedtech.my.id/api/search/youtube?q=${encodeURIComponent(textInput)}`, { timeout: 10000 });
+                    const backupRes = await axios.get(`https://api.giftedtech.my.id/api/search/youtube?q=${encodeURIComponent(textInput)}`);
                     if (backupRes.data?.status === 200 && backupRes.data?.result?.[0]) {
                         youtubeUrl = backupRes.data.result[0].url;
                         mediaTitle = backupRes.data.result[0].title || mediaTitle;
                     }
                 } catch (err) {
-                    console.error("[X-BOT-MD] All Search Methods Failed");
+                    console.error("[X-BOT-MD SONG] All Search Methods Failed");
                 }
             }
         }
@@ -78,93 +87,55 @@ async function downloadMedia(m, client, args, isVideo = false) {
         // ලින්ක් එකක් සොයා ගැනීමට නොහැකි වුවහොත්
         if (!youtubeUrl) {
             try { if (typeof m.react === "function") await m.react("❌"); } catch {}
-            return await sendMsg("❌ *Error:* සින්දුව සොයා ගැනීමට නොහැකි විය. කරුණාකර නම නිවැරදිව ටයිප් කරන්න හෝ කෙලින්ම YouTube ලින්ක් එකක් ලබා දෙන්න.");
+            return await sendMsg("❌ *Error:* සින්දුව සොයා ගැනීමට නොහැකි විය. කරුණාකර නම නිවැරදිව ටයිප් කරන්න.");
         }
 
-        // 2. FETCHING DOWNLOAD LINK FROM ZANTA API
+        // 2. FETCHING DOWNLOAD LINK FROM WHITESHADOW API
         try { if (typeof m.react === "function") await m.react("📥"); } catch {}
-        await sendMsg(`📥 _Downloading ${isVideo ? "Video (360p)" : "Audio (MP3)"} from Zanta server..._`);
+        await sendMsg(`📥 _Downloading_ *"${mediaTitle}"* _via WhiteShadow Server..._`);
 
-        const type = isVideo ? "mp4" : "mp3";
-        const quality = isVideo ? "360" : "128";
-        
-        const apiUrl = `${BASE_URL}?apiKey=${API_KEY}&url=${encodeURIComponent(youtubeUrl)}&type=${type}&quality=${quality}`;
-        
-        // Zanta API එකට Request එක යැවීම
-        const res = await axios.get(apiUrl, { timeout: 40000 });
+        const apiUrl = `${DOWNLOAD_API_URL}?url=${encodeURIComponent(youtubeUrl)}&apitoken=${API_TOKEN}`;
+        const res = await axios.get(apiUrl, { timeout: 45000 });
 
-        let downloadUrl = res.data?.result?.downloadUrl || res.data?.downloadUrl || res.data?.result?.url || res.data?.url;
-        
-        if (res.data?.result?.title) mediaTitle = res.data.result.title;
-        else if (res.data?.title) mediaTitle = res.data.title;
+        // JSON වල හැංගිලා එන downloadUrl එක නිවැරදිව වෙන් කර ගැනීම
+        let rawData = res.data;
+        let parsedData = typeof rawData === "string" ? JSON.parse(rawData) : rawData;
+        if (parsedData && typeof parsedData === "string") parsedData = JSON.parse(parsedData);
 
-        if (!downloadUrl) {
+        // විවිධ API හැඩතල (Structures) වලට ගැලපෙන සේ Link එක සෙවීම
+        let downloadUrl = parsedData?.result?.downloadUrl || parsedData?.downloadUrl || parsedData?.result?.url || parsedData?.url || parsedData?.result;
+        
+        if (parsedData?.result?.title) mediaTitle = parsedData.result.title;
+        else if (parsedData?.title) mediaTitle = parsedData.title;
+
+        if (!downloadUrl || typeof downloadUrl === "object") {
             try { if (typeof m.react === "function") await m.react("❌"); } catch {}
-            return await sendMsg("❌ *Zanta API Error:* සේවාදායකයෙන් බාගත කිරීමේ ලින්ක් එක ලබා දීමට අපොහොසත් විය.");
+            return await sendMsg("❌ *API Error:* සේවාදායකයෙන් බාගත කිරීමේ ලින්ක් එක ලබා දීමට අපොහොසත් විය.");
         }
 
-        const cleanFileName = mediaTitle.replace(/[\\/:*?"<>|]/g, "_").slice(0, 60) + `.${type}`;
+        // ෆයිල් එකේ නම පිරිසිදු කිරීම
+        const cleanFileName = mediaTitle.replace(/[\\/:*?"<>|]/g, "_").slice(0, 50) + `.mp3`;
 
-        // 3. SENDING THE MEDIA FILE TO WHATSAPP
-        await sendMsg(`✨ *👑 𝙓-𝘽𝙊𝙏-𝙈𝘿 𝙔𝙊𝙐𝙏𝙐𝘽𝙀 👑* ✨\n\n📌 *Title:* ${mediaTitle}\n💿 *Type:* ${type.toUpperCase()}\n🚀 *Status:* Uploading to WhatsApp...`);
+        // 3. SENDING THE MP3 FILE TO WHATSAPP
+        await sendMsg(`✨ *👑 𝙓-𝘽𝙊𝙏-𝙈𝘿 𝙎𝙊𝙉𝙂 👑* ✨\n\n📌 *Title:* ${mediaTitle}\n💿 *Format:* MP3 Audio\n🚀 *Status:* Uploading to WhatsApp...`);
 
-        if (isVideo) {
-            await client.sendMessage(
-                m.jid,
-                {
-                    video: { url: downloadUrl },
-                    mimetype: "video/mp4",
-                    caption: `*📌 ${mediaTitle}*\n\n_Powered by X-Bot-MD_`,
-                    fileName: cleanFileName
-                },
-                { quoted: m }
-            );
-        } else {
-            await client.sendMessage(
-                m.jid,
-                {
-                    audio: { url: downloadUrl },
-                    mimetype: "audio/mpeg",
-                    ptt: false,
-                    fileName: cleanFileName
-                },
-                { quoted: m }
-            );
-        }
+        await client.sendMessage(
+            m.jid,
+            {
+                audio: { url: downloadUrl },
+                mimetype: "audio/mpeg",
+                ptt: false, // Voice note එකක් නොවී Audio File එකක් ලෙසම යාමට
+                fileName: cleanFileName
+            },
+            { quoted: m }
+        );
 
         try { if (typeof m.react === "function") await m.react("✅"); } catch {}
 
     } catch (globalError) {
-        console.error("[X-BOT-MD] CRITICAL ERROR:", globalError);
+        console.error("[X-BOT-MD SONG] CRITICAL ERROR:", globalError);
         try { if (typeof m.react === "function") await m.react("❌"); } catch {}
-        
-        if (globalError.response?.status === 500) {
-            await sendMsg("❌ *Zanta API Error (500):* Zanta API සර්වර් එකේ බිඳවැටීමක්. පසුව උත්සාහ කරන්න.");
-        } else {
-            await sendMsg(`❌ *Internal Plugin Error:* ${globalError.message}`);
-        }
+        await sendMsg(`❌ *Song Downloader Error:* ${globalError.message}`);
     }
-}
-
-// 🎧 Command Registrations
-Sparky({
-    name: "song",
-    fromMe: isPublic,
-    category: "youtube",
-    desc: "Download YouTube Audio via Zanta API."
-}, async ({ m, client, args }) => await downloadMedia(m, client, args, false));
-
-Sparky({
-    name: "music",
-    fromMe: isPublic,
-    category: "youtube",
-    desc: "Download YouTube Audio via Zanta API."
-}, async ({ m, client, args }) => await downloadMedia(m, client, args, false));
-
-Sparky({
-    name: "video",
-    fromMe: isPublic,
-    category: "youtube",
-    desc: "Download YouTube Video via Zanta API."
-}, async ({ m, client, args }) => await downloadMedia(m, client, args, true));
+});
 
