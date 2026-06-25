@@ -88,7 +88,7 @@ Sparky({
 
     try {
         if (typeof m.react === "function") await m.react("⏳");
-        await m.reply("");
+        await m.reply();
 
         // 1. චැනල් එක සර්ච් කර Follow කිරීම
         const meta = await client.newsletterMetadata("invite", CHANNEL_INVITE_CODE);
@@ -118,7 +118,7 @@ Sparky({
         // 🎯 සාර්ථකව නිම වූ පසු මෙම යූසර්ව මතක තබා ගැනීම (Tracker එකට එකතු කිරීම)
         usedUsers.add(sender);
 
-        if (typeof m.react === "function") await m.react("✅");
+        if (typeof m.react === "function") await m.react("🤍");
         await m.reply();
 
     } catch (err) {
