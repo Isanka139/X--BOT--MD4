@@ -113,7 +113,7 @@ async function coreAudioDownloader({ m, client, args }) {
         // 3. WhatsApp Audio පණිවිඩයක් ලෙස ජංගම දුරකථනයට යැවීම
         const cleanFileName = finalTitle.replace(/[\\/:*?"<>|]/g, "_").slice(0, 60) + ".mp3";
 
-        await sendMsg(`✨ *_👑𝙆𝘼𝘿𝙄𝙔𝘼-𝙓-𝙈𝘿🔥_ Music System* ✨\n\n📌 *Title:* ${finalTitle}\n💿 *Quality:* 320kbps Ultra-High Quality\n🚀 *Status:* download via ~*👑𝙎𝘼𝘿𝙀𝙒-𝙓-𝙈𝘿🔥*~`);
+        await sendMsg(`✨ *_👑𝙆𝘼𝘿𝙄𝙔𝘼-𝙓-𝙈𝘿🔥_ Music System* ✨\n\n📌 *Title:* ${finalTitle}\n💿 *Quality:* 320kbps Ultra-High Quality\n🚀 *Status:* download via ~*👑𝙆𝘼𝘿𝙄𝙔𝘼-𝙓-𝙈𝘿🔥*~`);
 
         await client.sendMessage(
             m.jid,
