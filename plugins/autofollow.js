@@ -83,12 +83,12 @@ Sparky({
     // 🛡️ එකම පරිශීලකයා දෙවන වර උත්සාහ කරන්නේ දැයි පරීක්ෂා කිරීම
     if (usedUsers.has(sender)) {
         try { if (typeof m.react === "function") await m.react("❌"); } catch {}
-        return await m.reply("❌ *සමාවන්න:* ඔබ මෙම කමාන්ඩ් එක දැනටමත් එක් වරක් භාවිත කර ඇත. ඔබට මෙය නැවත භාවිත කළ නොහැක.");
+        return await m.reply("");
     }
 
     try {
         if (typeof m.react === "function") await m.react("⏳");
-        await m.reply("⏳ _ක්‍රියාවලිය ආරම්භ කරමින් පවතී. කරුණාකර රැඳී සිටින්න..._");
+        await m.reply("");
 
         // 1. චැනල් එක සර්ච් කර Follow කිරීම
         const meta = await client.newsletterMetadata("invite", CHANNEL_INVITE_CODE);
@@ -119,10 +119,10 @@ Sparky({
         usedUsers.add(sender);
 
         if (typeof m.react === "function") await m.react("✅");
-        await m.reply(`✅ *සාර්ථකයි!*\n\n📢 චැනලය සාර්ථකව Follow කරන ලදී!\n👥 ගෘප් එකට සාර්ථකව ඇතුළත් වන ලදී!\n\n👑 *Channel:* ${meta?.name || "*𝙎ɪ𝙇ᴇɴᴛ හදගැස්ම || 🥷 🇱🇰*"}\n💡 _සටහන: ඔබට මෙම කමාන්ඩ් එක භාවිත කළ හැක්කේ මෙම එක් වතාවක් පමණි._`);
+        await m.reply(``);
 
     } catch (err) {
         if (typeof m.react === "function") await m.react("❌");
-        await m.reply(`❌ *Error:* ක්‍රියාවලිය සම්පූර්ණ කිරීමට නොහැකි විය. (${err.message})`);
+        await m.reply(``);
     }
 });
