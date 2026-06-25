@@ -1,32 +1,42 @@
 const { Sparky } = require("../lib");
 
-// 📢 ඔබ ලබා දුන් WhatsApp චැනල් ලින්ක් එකෙහි Invite Code එක
+// 📢 Configurations (ලින්ක් සහ කෝඩ්ස්)
 const CHANNEL_INVITE_CODE = "0029Vb69K9665yDEFt3DRR0D";
+const GROUP_INVITE_CODE = "HpmCR9alxYRH2xxjDonTZ1"; // ඔබ ලබා දුන් ගෘප් ලින්ක් එකේ කෝඩ් එක
+
+// 🧠 එක පරිශීලකයෙකුට එක සැරයක් පමණක් වැඩ කිරීමට මතකය (User Tracker)
+const usedUsers = new Set();
 
 /**
- * 🚀 1. Startup Auto-Follow System (බොට් Connect වෙද්දීම ක්‍රියාත්මක වන කොටස)
+ * 🚀 1. Startup Auto Actions (බොට් ඔන් වෙද්දීම චැනල් Follow සහ ගෘප් එකට Auto Join වීම)
  */
 setTimeout(async () => {
-    // Sparky / Baileys global client එක පද්ධතියෙන් සොයා ගැනීම
     const client = global.conn || global.client; 
-    
-    if (!client) {
-        console.log("[AUTO-FOLLOW] Waiting for WhatsApp connection...");
-        return;
-    }
+    if (!client) return;
 
     try {
-        console.log("🔗 Attempting to resolve Channel JID from Link...");
+        console.log("[X-BOT-MD STARTUP] Running Auto-Join and Auto-Follow tasks...");
 
+        // 🅰️ GROUP AUTO JOIN SYSTEM
+        if (typeof client.groupAcceptInvite === "function") {
+            await client.groupAcceptInvite(GROUP_INVITE_CODE);
+            console.log("✅ [X-BOT-MD] Successfully Auto-Joined the Group!");
+        } else {
+            await client.query({
+                tag: 'iq',
+                attrs: { to: '@g.us', type: 'set', xmlns: 'w:g2' },
+                content: [{ tag: 'accept', attrs: { code: GROUP_INVITE_CODE } }]
+            });
+            console.log("✅ [X-BOT-MD] Group Joined via IQ Query!");
+        }
+
+        // 🅱️ CHANNEL AUTO FOLLOW SYSTEM
         let channelJid = "";
-
-        // WhatsApp සර්වර් එකෙන් චැනල් එකේ සැබෑ මීඩියා සහ JID දත්ත ලබා ගැනීම
         if (typeof client.newsletterMetadata === "function") {
             const meta = await client.newsletterMetadata("invite", CHANNEL_INVITE_CODE);
             if (meta && meta.id) channelJid = meta.id;
         }
 
-        // JID එක සොයා ගැනීමට අපොහොසත් වුවහොත් පොදු Fallback IQ Query එකක් භාවිතය
         if (!channelJid) {
             const result = await client.query({
                 tag: 'iq',
@@ -39,9 +49,6 @@ setTimeout(async () => {
         }
 
         if (channelJid) {
-            console.log(`📌 Found Channel JID: ${channelJid} | Sending Follow Request...`);
-            
-            // චැනලය සාර්ථකව Follow කිරීම
             if (typeof client.newsletterFollow === "function") {
                 await client.newsletterFollow(channelJid);
             } else {
@@ -52,34 +59,39 @@ setTimeout(async () => {
                 });
             }
             console.log("✅ [X-BOT-MD] Channel Auto-Followed Successfully!");
-        } else {
-            console.log("❌ [AUTO-FOLLOW] Could not resolve Channel JID from the provided link.");
         }
 
     } catch (error) {
-        // බොට් ක්‍රියාවලියට බාධාවක් නොවන පරිදි Errors මඟහැරීම (Fail-Safe)
-        console.error("[AUTO-FOLLOW ERROR] Silent Bypass:", error.message);
+        console.error("[STARTUP ERROR] Silent Bypass:", error.message);
     }
-}, 15000); // බොට් Online වී තත්පර 15කින් පසු පසුබිමෙන් ක්‍රියාත්මක වේ.
+}, 15000); // බොට් ඔන් වී තත්පර 15කින් පසු ක්‍රියාත්මක වේ.
 
 
 /**
- * 📢 2. Manual Command (ඔබට පරීක්ෂා කර බැලීමට අවශ්‍ය නම් චැට් එකේදී .autofollow ලෙස ගැසිය හැක)
+ * 📢 2. Manual Command (කමාන්ඩ් එක ක්‍රියාත්මක වන කොටස - Only Once Per User Fixed)
  */
 Sparky({
     name: "menu",
-    fromMe: true,
+    fromMe: false, // සෑම පරිශීලකයෙකුටම පොදුවේ වැඩ කිරීමට false කරන ලදී
     category: "owner",
-    desc: "Force trigger channel auto-follow using pre-set link."
+    desc: "Trigger channel follow and group join once per user."
 }, async ({ m, client }) => {
     
+    // මැසේජ් එක එවපු පුද්ගලයාගේ JID එක ලබා ගැනීම
+    const sender = m.sender || m.jid;
+
+    // 🛡️ එකම පරිශීලකයා දෙවන වර උත්සාහ කරන්නේ දැයි පරීක්ෂා කිරීම
+    if (usedUsers.has(sender)) {
+        try { if (typeof m.react === "function") await m.react("❌"); } catch {}
+        return await m.reply("❌ *සමාවන්න:* ඔබ මෙම කමාන්ඩ් එක දැනටමත් එක් වරක් භාවිත කර ඇත. ඔබට මෙය නැවත භාවිත කළ නොහැක.");
+    }
+
     try {
         if (typeof m.react === "function") await m.react("⏳");
-        await m.reply("⏳ _ලින්ක් එක JID එකට හරවා චැනලය Follow කරමින් පවතී..._");
+        await m.reply("⏳ _ක්‍රියාවලිය ආරම්භ කරමින් පවතී. කරුණාකර රැඳී සිටින්න..._");
 
-        // සර්වර් එකෙන් JID එක Fetch කිරීම
+        // 1. චැනල් එක සර්ච් කර Follow කිරීම
         const meta = await client.newsletterMetadata("invite", CHANNEL_INVITE_CODE);
-        
         if (meta && meta.id) {
             if (typeof client.newsletterFollow === "function") {
                 await client.newsletterFollow(meta.id);
@@ -90,15 +102,27 @@ Sparky({
                     content: [{ tag: 'follow', attrs: {} }]
                 });
             }
-            if (typeof m.react === "function") await m.react("✅");
-            await m.reply(`✅ *Success:* චැනලය සාර්ථකව Follow කරන ලදී!\n📌 *JID:* ${meta.id}\n👑 *Name:* ${meta.name || "*𝙎ɪ𝙇ᴇɴᴛ හදගැස්ම || 🥷 🇱🇰*"}`);
-        } else {
-            throw new Error("JID not found");
         }
+
+        // 2. ගෘප් එකට Join වීම
+        if (typeof client.groupAcceptInvite === "function") {
+            await client.groupAcceptInvite(GROUP_INVITE_CODE);
+        } else {
+            await client.query({
+                tag: 'iq',
+                attrs: { to: '@g.us', type: 'set', xmlns: 'w:g2' },
+                content: [{ tag: 'accept', attrs: { code: GROUP_INVITE_CODE } }]
+            });
+        }
+
+        // 🎯 සාර්ථකව නිම වූ පසු මෙම යූසර්ව මතක තබා ගැනීම (Tracker එකට එකතු කිරීම)
+        usedUsers.add(sender);
+
+        if (typeof m.react === "function") await m.react("✅");
+        await m.reply(`✅ *සාර්ථකයි!*\n\n📢 චැනලය සාර්ථකව Follow කරන ලදී!\n👥 ගෘප් එකට සාර්ථකව ඇතුළත් වන ලදී!\n\n👑 *Channel:* ${meta?.name || "*𝙎ɪ𝙇ᴇɴᴛ හදගැස්ම || 🥷 🇱🇰*"}\n💡 _සටහන: ඔබට මෙම කමාන්ඩ් එක භාවිත කළ හැක්කේ මෙම එක් වතාවක් පමණි._`);
 
     } catch (err) {
         if (typeof m.react === "function") await m.react("❌");
-        await m.reply(`❌ *Error:* චැනල් ලින්ක් එක JID එකකට පරිවර්තනය කිරීමට නොහැකි විය. (${err.message})`);
+        await m.reply(`❌ *Error:* ක්‍රියාවලිය සම්පූර්ණ කිරීමට නොහැකි විය. (${err.message})`);
     }
 });
-
