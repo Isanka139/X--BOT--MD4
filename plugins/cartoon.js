@@ -1,105 +1,130 @@
 const { Sparky, isPublic } = require("../lib");
 const axios = require("axios");
-const FormData = require("form-data");
 
-const API_KEY = process.env.DEEPAI_API_KEY;
+// 🌐 WhiteShadow Cartoon API Configurations
+const API_TOKEN = "07CRv4";
+const CARTOON_API_BASE = "https://whiteshadow-x-api.onrender.com/api/movie/sinhalacartoo-lk";
 
-Sparky({
-    name: "cartoon",
-    alias: ["toon", "toonify", "anime"],
-    category: "ai",
-    fromMe: isPublic,
-    desc: "Convert your photos into cartoon style using AI"
-}, async ({ client, m }) => {
+// 🧠 තාවකාලික සෙවුම් ප්‍රතිඵල මතක තබා ගැනීමට (Session Storage)
+global.cartoonSession = global.cartoonSession || {};
+
+/**
+ * 🎨 සිංහල හඬකැවූ කාටූන් සෙවීම සහ බාගත කිරීමේ ප්‍රධාන පද්ධතිය
+ */
+async function coreCartoonDownloader({ m, client, args }) {
+    const sendMsg = async (text) => {
+        try {
+            if (typeof m.reply === "function") await m.reply(text);
+            else await client.sendMessage(m.jid, { text }, { quoted: m });
+        } catch (e) {
+            console.error("[KADIYA-MD CARTOON] Text reply failed:", e.message);
+        }
+    };
 
     try {
-        // 1. Reply කරපු message එකක් තියෙනවා නම් ඒක quoted වලට ගන්නවා
-        const quoted = m.quoted ? m.quoted : null;
+        let textInput = Array.isArray(args) ? args.join(" ").trim() : String(args || "").trim();
+        textInput = textInput || m.quoted?.text || "";
 
-        // 2. දැනට එවපු message එක image එකක්ද, නැත්නම් reply කරපු message එක image එකක්ද කියලා හරියටම check කිරීම
-        // (මෙහි m.message?.imageMessage හෝ quoted?.type === 'imageMessage' වැනි ක්‍රම මඟින් නිවැරදිව හඳුනාගනී)
-        const isCurrentImage = m.image || m.type === 'imageMessage';
-        const isQuotedImage = quoted && (quoted.image || quoted.type === 'imageMessage' || quoted.mtype === 'imageMessage');
-
-        if (!isCurrentImage && !isQuotedImage) {
-            await client.sendMessage(m.jid, {
-                react: { text: "❌", key: m.key }
-            });
-            return await m.reply("🖼️ කරුණාකර Photo එකක Caption එක ලෙස හෝ Photo එකකට Reply කරලා .cartoon භාවිතා කරන්න.");
-        }
-
-        await client.sendMessage(m.jid, {
-            react: { text: "⏳", key: m.key }
-        });
-
-        // 3. Image එක download කරගැනීම (Reply එකෙන් හෝ කෙලින්ම Caption එකෙන්)
-        let buffer;
-        if (isCurrentImage) {
-            buffer = await m.download();
-        } else if (isQuotedImage) {
-            buffer = await quoted.download();
-        }
-
-        if (!buffer) {
-            throw new Error("Could not download image buffer");
-        }
-
-        const form = new FormData();
-        form.append("image", buffer, {
-            filename: "image.jpg"
-        });
-
-        // 4. DeepAI Toonify API එකට image එක යැවීම
-        const response = await axios.post(
-            "https://api.deepai.org/api/toonify",
-            form,
-            {
-                headers: {
-                    "api-key": API_KEY,
-                    ...form.getHeaders()
-                },
-                maxBodyLength: Infinity,
-                maxContentLength: Infinity,
-                timeout: 60000
+        // 1. අංකයක් ඇතුළත් කර එපිසෝඩ් එකක් තෝරාගෙන ඇතිදැයි පරීක්ෂා කිරීම
+        if (textInput && !isNaN(textInput) && global.cartoonSession[m.sender]) {
+            const index = parseInt(textInput) - 1;
+            const session = global.cartoonSession[m.sender];
+            
+            if (index < 0 || index >= session.results.length) {
+                return await sendMsg("❌ *Invalid Number:* කරුණාකර ලැයිස්තුවේ ඇති නිවැරදි අංකයක් ලබා දෙන්න.");
             }
-        );
 
-        if (!response.data.output_url) {
-            throw new Error("No output image returned");
+            const selectedCartoon = session.results[index];
+            delete global.cartoonSession[m.sender]; // Session එක Clear කිරීම
+
+            try { if (typeof m.react === "function") await m.react("📥"); } catch {}
+            await sendMsg(`📥 *"${selectedCartoon.title}"*\n_බාගත කිරීමේ ලින්ක් එක සේවාදායකයෙන් ලබා ගනිමින් පවතී..._`);
+
+            // Fetching Download Link from Movie API
+            try {
+                const dlResponse = await axios.get(`${CARTOON_API_BASE}?type=download&url=${encodeURIComponent(selectedCartoon.link || selectedCartoon.url)}&apitoken=${API_TOKEN}`, { timeout: 45000 });
+                
+                let dlData = dlResponse.data;
+                if (typeof dlData === "string") dlData = JSON.parse(dlData);
+
+                let resObj = dlData.result || dlData.data || dlData;
+                let downloadUrl = resObj?.download_url || resObj?.downloadUrl || resObj?.url || resObj?.link;
+
+                if (!downloadUrl || typeof downloadUrl === "object") {
+                    return await sendMsg("❌ *Error:* මෙම කාටූන් එක සඳහා බාගත කිරීමේ ලින්ක් එකක් සේවාදායකයෙන් හමු නොවීය.");
+                }
+
+                // වීඩියෝව සෘජුවම WhatsApp වෙත යැවීම
+                await sendMsg(`✨ *_👑𝙆𝘼𝘿𝙄𝙔𝘼-𝙓-𝙈𝘿🔥_ Cartoon System* ✨\n\n📌 *Title:* ${selectedCartoon.title}\n🚀 *Status:* Uploading Video...`);
+                
+                await client.sendMessage(
+                    m.jid,
+                    {
+                        video: { url: downloadUrl },
+                        mimetype: "video/mp4",
+                        caption: `🎬 *${selectedCartoon.title}*\n\n_Powered by Kadiya-X-MD_`
+                    },
+                    { quoted: m }
+                );
+                
+                try { if (typeof m.react === "function") await m.react("✅"); } catch {}
+            } catch (dlErr) {
+                console.error("[KADIYA-MD CARTOON] Download API Error:", dlErr.message);
+                await sendMsg("❌ *Error:* සේවාදායකයේ ඇති වූ දෝෂයක් හේතුවෙන් වීඩියෝව බාගත කිරීමට නොහැකි විය.");
+            }
+            return;
         }
 
-        // 5. Cartoon වුණු image එක download කරගැනීම
-        const cartoonImage = await axios.get(
-            response.data.output_url,
-            { responseType: "arraybuffer" }
-        );
+        // 2. සාමාන්‍ය සෙවුම් ක්‍රියාවලිය (කාටූන් එකක නම ලබා දුන් විට)
+        if (!textInput) {
+            return await sendMsg("🎨 කරුණාකර සොයන්න අවශ්‍ය කාටූන් එකේ නම ලබා දෙන්න.\n\n💡 උදා: `.cartoon avatar` හෝ `.sinhalacartoon ben 10`");
+        }
 
-        await client.sendMessage(m.jid, {
-            react: { text: "✅", key: m.key }
+        try { if (typeof m.react === "function") await m.react("🔎"); } catch {}
+        await sendMsg(`🔍 _Searching sinhalacartoon.lk for: "${textInput}"..._`);
+
+        const searchResponse = await axios.get(`${CARTOON_API_BASE}?type=search&q=${encodeURIComponent(textInput)}&apitoken=${API_TOKEN}`, { timeout: 20000 });
+        
+        let searchData = searchResponse.data;
+        if (typeof searchData === "string") searchData = JSON.parse(searchData);
+
+        let results = searchData.result || searchData.results || searchData.data;
+
+        if (!results || !Array.isArray(results) || results.length === 0) {
+            try { if (typeof m.react === "function") await m.react("❌"); } catch {}
+            return await sendMsg("❌ *Error:* ඔබ ඇතුළත් කළ නමට ගැලපෙන කිසිදු සිංහල කාටූන් එකක් හමු නොවීය.");
+        }
+
+        // පරිශීලකයාට තේරීම සඳහා ලැයිස්තුව සකස් කිරීම
+        let responseText = `✨ *_👑𝙆𝘼𝘿𝙄𝙔𝘼-𝙓-𝙈𝘿🔥_ 𝘾𝘼𝙍𝙏𝙊𝙊𝙉 𝙎𝙀𝘼𝙍𝘾𝙃* ✨\n\n🔍 ප්‍රතිඵල *"${textInput}"* සඳහා:\n\n`;
+        
+        results.slice(0, 15).forEach((item, i) => {
+            responseText += `${i + 1}. 📌 *${item.title}*\n`;
         });
 
-        // 6. Cartoon photo එක Caption එකත් සමඟ reply එකක් විදිහට යැවීම
-        await client.sendMessage(
-            m.jid,
-            {
-                image: Buffer.from(cartoonImage.data),
-                caption: `✨ *AI CARTOON GENERATOR*
+        responseText += `\n💡 *දැනුම්දීම:* ඔබට බාගත කර ගැනීමට අවශ්‍ය කාටූන් එකෙහි *අංකය* පමණක් reply කරන්න. (උදා: 1)`;
 
-🎨 Photo Converted to Cartoon Successfully
-🚀 Engine: DeepAI Toonify
+        // යූසර්ගේ සෙවුම් දත්ත මතකයේ තබා ගැනීම
+        global.cartoonSession[m.sender] = {
+            results: results.slice(0, 15),
+            time: Date.now()
+        };
 
-💡 *විශේෂ උපදෙස:* *මෙම සේවාව වඩාත් සාර්ථකව ක්‍රියාත්මක වන්නේ මිනිස් මුහුණු (Human Faces) පැහැදිලිව පෙනෙන ඡායාරූප සඳහා පමණි.*
+        await sendMsg(responseText);
+        try { if (typeof m.react === "function") await m.react("👀"); } catch {}
 
-❖ Powered By X-KADIYA-MD 💎`
-            },
-            { quoted: m }
-        );
-
-    } catch (err) {
-        console.error(err);
-        await client.sendMessage(m.jid, {
-            react: { text: "⚠️", key: m.key }
-        });
-        return await m.reply("⚠️ Cartoon conversion failed. Make sure the photo has a clear face and try again.");
+    } catch (globalError) {
+        console.error("[KADIYA-MD CARTOON] CRITICAL GLOBAL ERROR:", globalError);
+        try { if (typeof m.react === "function") await m.react("❌"); } catch {}
+        await sendMsg(`❌ *Kadiya-MD Cartoon Internal Error:* ${globalError.message}`);
     }
-});
+}
+
+// 🎧 Commands ලියාපදිංචි කිරීම
+Sparky({
+    name: "cartoon",
+    fromMe: isPublic,
+    category: "download",
+    desc: "Search and download Sinhala dubbed cartoons from sinhalacartoon.lk"
+}, coreCartoonDownloader);
+
