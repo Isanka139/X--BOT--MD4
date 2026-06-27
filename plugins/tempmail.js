@@ -57,7 +57,7 @@ Sparky({
             time: Date.now()
         };
 
-        let responseText = `✨ *👑 𝙓-𝘽0𝙏-𝙈程序 𝙏𝙀𝙈𝙋 𝙈𝘼𝙄𝙇 👑* ✨\n\n`;
+        let responseText = `✨ *👑 𝙓-𝘽0𝙏-𝙈𝘿 𝙏𝙀𝙈𝙋 𝙈𝘼𝙄𝙇 👑* ✨\n\n`;
         responseText += `📌 *Your Temp Mail:* \`${generatedEmail.trim()}\`\n\n`;
         responseText += `💡 *Inbox එක පරීක්ෂා කිරීමට:* \`.checkmail\` කමාන්ඩ් එක භාවිතා කරන්න.\n`;
         responseText += `_Note: මෙම ඊමේල් ලිපිනය මිනිත්තු 45ක් යනතුරු සක්‍රීයව පවතී._`;
@@ -118,7 +118,7 @@ Sparky({
             return await sendMsg(`📥 *Inbox Empty:* \`${targetMail}\` සඳහා තවමත් කිසිදු පණිවිඩයක් ලැබී නැත.`);
         }
 
-        let inboxText = `✨ *👑 𝙓-𝘽𝙊𝙏-𝙈🇩 𝙈𝘼𝙄𝙇 𝙄𝙉𝘽𝙊𝙓 👑* ✨\n\n`;
+        let inboxText = `✨ *👑 𝙓-𝘽𝙊𝙏-𝙈𝘿 𝙈𝘼𝙄𝙇 𝙄𝙉𝘽𝙊𝙓 👑* ✨\n\n`;
         inboxText += `📧 *Mail:* \`${targetMail}\`\n📬 *Total Messages:* ${messages.length}\n\n`;
         inboxText += `--- --- --- --- --- --- --- ---\n\n`;
 
@@ -146,7 +146,7 @@ Sparky({
         
         // 400 Failover Handler: සර්වර් එකෙන් කෙලින්ම මැසේජ් නැති කතාවක් Status code එකක් විදිහට එව්වොත් ඒක Inbox Empty විදිහට පෙන්වීම
         if (err.response?.status === 400 || err.message.includes("400")) {
-            return await sendMsg(`📥 *Inbox Empty:* දැනට මෙම ඊමේල් ලිපිනය සඳහා නව පණිවිඩ කිසිවක් ලැබී නොමැත.`);
+            return await sendMsg(`📥 *𝙄𝙉𝘽𝙊𝙓:* දැනට මෙම ඊමේල් ලිපිනය සඳහා නව පණිවිඩ කිසිවක් ලැබී නොමැත.`);
         }
         
         await sendMsg(`❌ *TempMail Error:* පණිවිඩ පරීක්ෂා කිරීම අසාර්ථක විය. (${err.message})`);
